@@ -2,7 +2,7 @@ from flask import jsonify, request, g
 from app.models import User
 from app.auth import bp
 from .token import get_token
-from .auth import verify_password, basic_auth_error
+from .auth import verify_password, basic_auth_error, verify_token, token_auth_error
 from app.errors import bad_request, trueReturn
 from app.common import session_commit
 
@@ -50,3 +50,12 @@ def login():
     else:
         return basic_auth_error()
 
+
+@bp.route('/logout', methods=['GET'])
+def logout():
+    token = request.cookies.get('token')
+    if not verify_token(token):
+        return token_auth_error()
+    g.current_user.revoke_token()
+    response = trueReturn(message='登出成功')
+    return response

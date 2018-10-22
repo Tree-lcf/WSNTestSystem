@@ -1,4 +1,4 @@
-from flask import jsonify, g
+from flask import g
 from app import db
 
 

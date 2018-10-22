@@ -4,23 +4,23 @@ from app import db
 from datetime import datetime, timedelta
 from werkzeug.security import generate_password_hash, check_password_hash
 
-user_project = db.Table('user_project',
-                        db.Column('user_id', db.Integer, db.ForeignKey('user.id'), nullable=False),
-                        db.Column('project_id', db.Integer, db.ForeignKey('project.id'), nullable=False)
+project_user = db.Table('project_user',
+                        db.Column('project_id', db.Integer, db.ForeignKey('project.id'), nullable=False),
+                        db.Column('user_id', db.Integer, db.ForeignKey('user.id'), nullable=False)
                         )
 
 
 class User(db.Model):
     id = db.Column(db.Integer, primary_key=True)
-    username = db.Column(db.String(255), unique=True)
+    username = db.Column(db.String(255), index=True, unique=True)
     email = db.Column(db.String(255), unique=True)
     password_hash = db.Column(db.String(128))
     is_administrator = db.Column(db.Boolean, default=False)
     token = db.Column(db.String(32), index=True, unique=True)
     token_expiration = db.Column(db.DateTime)
-    projects = db.relationship(
-        'Project', secondary=user_project,
-        backref=db.backref('user', lazy='dynamic'), lazy='dynamic')
+    # projects = db.relationship(
+    #     'Project', secondary=user_project,
+    #     backref=db.backref('users', lazy='dynamic'), lazy='dynamic')
 
     def __repr__(self):
         return '<User {}>'.format(self.username)
@@ -34,24 +34,24 @@ class User(db.Model):
     def add(self):
         db.session.add(self)
 
-    def follow(self, user):
-        if not self.is_following(user):
-            self.followed.append(user)
-
-    def unfollow(self, user):
-        if self.is_following(user):
-            self.followed.remove(user)
-
-    def is_following(self, user):
-        return self.followed.filter(
-            followers.c.followed_id == user.id).count() > 0
-
-    def followed_posts(self):
-        followed = Post.query.join(
-            followers, (followers.c.followed_id == Post.user_id)).filter(
-                followers.c.follower_id == self.id)
-        own = Post.query.filter_by(user_id=self.id)
-        return followed.union(own).order_by(Post.timestamp.desc())
+    # def follow(self, user):
+    #     if not self.is_following(user):
+    #         self.followed.append(user)
+    #
+    # def unfollow(self, user):
+    #     if self.is_following(user):
+    #         self.followed.remove(user)
+    #
+    # def is_following(self, user):
+    #     return self.followed.filter(
+    #         followers.c.followed_id == user.id).count() > 0
+    #
+    # def followed_posts(self):
+    #     followed = Post.query.join(
+    #         followers, (followers.c.followed_id == Post.user_id)).filter(
+    #             followers.c.follower_id == self.id)
+    #     own = Post.query.filter_by(user_id=self.id)
+    #     return followed.union(own).order_by(Post.timestamp.desc())
 
     def to_dict(self):
         data = {
@@ -91,30 +91,40 @@ class User(db.Model):
 
 class Project(db.Model):
     id = db.Column(db.Integer, primary_key=True)
-    project_name = db.Column(db.String(255), unique=True)
+    project_name = db.Column(db.String(255), index=True, unique=True)
     timestamp = db.Column(db.DateTime, index=True, default=datetime.now)
     modules = db.relationship('Module', backref='project', lazy='dynamic')
     envs = db.relationship('Env', backref='project', lazy='dynamic')
     scenes = db.relationship('Scene', backref='project', lazy='dynamic')
+    users = db.relationship(
+        'User', secondary=project_user,
+        backref=db.backref('projects', lazy='dynamic'), lazy='dynamic')
 
     def __repr__(self):
         return '<Project {}>'.format(self.name)
+
+    def from_dict(self, data):
+        for field in ['project_name']:
+            if field in data:
+                setattr(self, field, data[field])
 
     def to_dict(self):
         data = {
             'id': self.id,
             'project_name': self.project_name,
             'timestamp': self.timestamp,
-            'module_count': self.modules.count(),
+            'modules_count': self.modules.count(),
             'scenes_count': self.scenes.count(),
-            'envs_count': self.envs.count()
+            'envs_count': self.envs.count(),
+            'users_count': self.users.count(),
+            'users_list': [user.username for user in self.users.order_by(User.username).all()]
         }
         return data
 
 
 class Module(db.Model):
     id = db.Column(db.Integer, primary_key=True)
-    module_name = db.Column(db.String(255), unique=True)
+    module_name = db.Column(db.String(255), index=True, unique=True)
     timestamp = db.Column(db.DateTime, index=True, default=datetime.now)
     project_id = db.Column(db.Integer, db.ForeignKey('project.id'))
     apis = db.relationship('Api', backref='module', lazy='dynamic')
@@ -125,8 +135,8 @@ class Module(db.Model):
 
 class Env(db.Model):
     id = db.Column(db.Integer, primary_key=True)
-    env_name = db.Column(db.String(255))
-    env_version = db.Column(db.String(255))
+    env_name = db.Column(db.String(255), index=True, unique=True)
+    env_version = db.Column(db.String(255), index=True, unique=True)
     env_host = db.Column(db.String(255))
     env_var = db.Column(db.Text())
     env_param = db.Column(db.Text())

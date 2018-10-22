@@ -2,7 +2,7 @@ from datetime import datetime, timedelta
 import unittest
 import requests
 from app import create_app, db
-from app.models import User
+from app.models import User, Project
 from config import Config
 from app.common import AttrDict
 
@@ -51,13 +51,18 @@ class TestRegLoginCase(unittest.TestCase):
         host = 'http://127.0.0.1:5000'
         self.register_url = host + '/auth/register'
         self.login_url = host + '/auth/login'
+        self.logout_url = host + '/auth/logout'
         self.get_projects_url = host + '/api/projects'
+        self.add_project_url = host + '/api/project'
+        self.project_has_user_url = host + '/api/project_has_user'
 
     def tearDown(self):
         db.session.remove()
         user = User.query.filter_by(username='003').first()
+        project = Project.query.filter_by(project_name='app').first()
         try:
             db.session.delete(user)
+            db.session.delete(project)
             db.session.commit()
         except Exception:
             pass
@@ -78,7 +83,7 @@ class TestRegLoginCase(unittest.TestCase):
         self.assertEqual(response.error, 'Bad Request')
 
     def test_login_success(self):
-        requests.post(self.register_url, json=self.reg_data).json()
+        requests.post(self.register_url, json=self.reg_data)
         response = requests.post(self.login_url, json=self.login_data).json()
         response = AttrDict(response)
         self.assertTrue(response.status)
@@ -87,25 +92,44 @@ class TestRegLoginCase(unittest.TestCase):
 
     def test_login_fail(self):
         del self.login_data['password']
-        requests.post(self.register_url, json=self.reg_data).json()
+        requests.post(self.register_url, json=self.reg_data)
         response = requests.post(self.login_url, json=self.login_data).json()
         response = AttrDict(response)
         self.assertFalse(response.status)
         self.assertEqual(response.error, 'Bad Request')
 
     def test_login_Unauthorized(self):
-        requests.post(self.register_url, json=self.reg_data).json()
+        requests.post(self.register_url, json=self.reg_data)
         self.login_data['password'] = '456'
         response = requests.post(self.login_url, json=self.login_data).json()
         response = AttrDict(response)
         self.assertFalse(response.status)
         self.assertEqual(response.error, 'Unauthorized')
 
-    def test_getProjectList_success(self):
-        requests.post(self.register_url, json=self.reg_data).json()
+    def test_login_out(self):
+        requests.post(self.register_url, json=self.reg_data)
         response = requests.post(self.login_url, json=self.login_data).json()
         response = AttrDict(response)
         cookies = {'token': response.data.token}
+        response = requests.get(self.logout_url, cookies=cookies).json()
+        response = AttrDict(response)
+        print(response)
+        self.assertTrue(response.status)
+
+    def test_login_out_fail(self):
+        cookies = {'token': ''}
+        response = requests.get(self.logout_url, cookies=cookies).json()
+        response = AttrDict(response)
+        print(response)
+        self.assertFalse(response.status)
+
+    def test_getProjectList_success(self):
+        requests.post(self.register_url, json=self.reg_data)
+        response = requests.post(self.login_url, json=self.login_data).json()
+        response = AttrDict(response)
+        cookies = {'token': response.data.token}
+        payload = {'project_name': 'app'}
+        requests.post(self.add_project_url, cookies=cookies, json=payload)
         payload = {'pageNum': '3', 'perPage': '20'}
         response = requests.get(self.get_projects_url, cookies=cookies, params=payload).json()
         response = AttrDict(response)
@@ -115,6 +139,51 @@ class TestRegLoginCase(unittest.TestCase):
     def test_getProjectList_fail(self):
         cookies = {'token': '123'}
         response = requests.get(self.get_projects_url, cookies=cookies).json()
+        response = AttrDict(response)
+        self.assertFalse(response.status)
+
+    def test_add_Project_success(self):
+        requests.post(self.register_url, json=self.reg_data)
+        response = requests.post(self.login_url, json=self.login_data).json()
+        response = AttrDict(response)
+        cookies = {'token': response.data.token}
+        payload = {'project_name': 'app'}
+        response = requests.post(self.add_project_url, cookies=cookies, json=payload).json()
+        response = AttrDict(response)
+        print(response)
+        self.assertTrue(response.status)
+        self.assertEqual(response.data.project_name, 'app')
+
+    def test_project_has_user_success(self):
+        requests.post(self.register_url, json=self.reg_data)
+        response = requests.post(self.login_url, json=self.login_data).json()
+        response = AttrDict(response)
+        cookies = {'token': response.data.token}
+        payload = {'project_name': 'app'}
+        requests.post(self.add_project_url, cookies=cookies, json=payload)
+
+        payload = {
+            'project_name': 'app',
+            'username_list': ['003']
+        }
+        response = requests.post(self.project_has_user_url, cookies=cookies, json=payload).json()
+        response = AttrDict(response)
+        print(response)
+        self.assertTrue(response.status)
+
+    def test_project_has_user_fail(self):
+        requests.post(self.register_url, json=self.reg_data)
+        response = requests.post(self.login_url, json=self.login_data).json()
+        response = AttrDict(response)
+        cookies = {'token': response.data.token}
+        payload = {'project_name': 'app'}
+        requests.post(self.add_project_url, cookies=cookies, json=payload)
+
+        payload = {
+            'project_name': 'app',
+            'username_list': ['006']
+        }
+        response = requests.post(self.project_has_user_url, cookies=cookies, json=payload).json()
         response = AttrDict(response)
         print(response)
         self.assertFalse(response.status)
