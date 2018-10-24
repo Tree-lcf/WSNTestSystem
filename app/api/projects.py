@@ -121,6 +121,8 @@ def project_has_user():
         user = User.query.filter_by(username=username).first()
         if not user:
             return bad_request('用户 %s 不存在' % username)
+        if user in project.users.all():
+            return bad_request('用户 %s 已添加' % username)
         project.add_user(user)
         session_commit()
 

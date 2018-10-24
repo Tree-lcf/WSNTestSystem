@@ -44,6 +44,11 @@ class TestRegLoginCase(unittest.TestCase):
             'email': '003@wsn.cn',
             'password': '123'
         }
+        self.reg_data_copy = {
+            'username': '007',
+            'email': '007@wsn.cn',
+            'password': '123'
+        }
         self.login_data = {
             'username': '003',
             'password': '123'
@@ -164,6 +169,23 @@ class TestRegLoginCase(unittest.TestCase):
         cookies = {'token': response.data.token}
         payload = {'project_name': 'app'}
         requests.post(self.add_project_url, cookies=cookies, json=payload)
+        requests.post(self.register_url, json=self.reg_data_copy)
+        payload = {
+            'project_name': 'app',
+            'username_list': ['007']
+        }
+        response = requests.post(self.project_has_user_url, cookies=cookies, json=payload).json()
+        response = AttrDict(response)
+        print(response)
+        self.assertTrue(response.status)
+
+    def test_project_has_user_fail_1(self):
+        requests.post(self.register_url, json=self.reg_data)
+        response = requests.post(self.login_url, json=self.login_data).json()
+        response = AttrDict(response)
+        cookies = {'token': response.data.token}
+        payload = {'project_name': 'app'}
+        requests.post(self.add_project_url, cookies=cookies, json=payload)
 
         payload = {
             'project_name': 'app',
@@ -172,9 +194,9 @@ class TestRegLoginCase(unittest.TestCase):
         response = requests.post(self.project_has_user_url, cookies=cookies, json=payload).json()
         response = AttrDict(response)
         print(response)
-        self.assertTrue(response.status)
+        self.assertFalse(response.status)
 
-    def test_project_has_user_fail(self):
+    def test_project_has_user_fail_2(self):
         requests.post(self.register_url, json=self.reg_data)
         response = requests.post(self.login_url, json=self.login_data).json()
         response = AttrDict(response)
