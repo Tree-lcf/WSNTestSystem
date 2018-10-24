@@ -26,26 +26,28 @@ def get_projects():
 def create_project():
     data = request.get_json() or {}
     project_name = data.get('project_name')
-    if not project_name:
-        return bad_request('must include project name')
+    owner_name = data.get('owner_name')
+    if not project_name or owner_name:
+        return bad_request('must include project name or owner_name')
 
     if Project.query.filter_by(project_name=project_name).first():
         return bad_request('please use a different project name')
 
-    project = Project(project_name=project_name)
+    if not User.query.filter_by(username=owner_name).first():
+        return bad_request('owner does not exist')
+
+    project = Project(project_name=project_name, owner_name=owner_name)
     db.session.add(project)
     session_commit()
     project = Project.query.filter_by(project_name=project_name).first()
     if not project:
         return bad_request('create project fail')
-    project.add_user(g.current_user)
-
+    # project.add_user(g.current_user)
     # admins = User.admins_list()
     # if admins:
     #     for admin in admins:
     #         project.add_user(admin)
-
-    session_commit()
+    # session_commit()
     data = project.to_dict()
     response = trueReturn(data, 'create project successfully')
     # response.status_code = 201

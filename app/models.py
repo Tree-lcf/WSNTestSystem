@@ -19,6 +19,8 @@ class User(db.Model):
     is_administrator = db.Column(db.Boolean, default=False)
     token = db.Column(db.String(32), index=True, unique=True)
     token_expiration = db.Column(db.DateTime)
+    # create_projects = db.relationship('Project', backref='owner', lazy='dynamic')
+
     # projects = db.relationship(
     #     'Project', secondary=user_project,
     #     backref=db.backref('users', lazy='dynamic'), lazy='dynamic')
@@ -39,25 +41,6 @@ class User(db.Model):
 
     def add(self):
         db.session.add(self)
-
-    # def follow(self, user):
-    #     if not self.is_following(user):
-    #         self.followed.append(user)
-    #
-    # def unfollow(self, user):
-    #     if self.is_following(user):
-    #         self.followed.remove(user)
-    #
-    # def is_following(self, user):
-    #     return self.followed.filter(
-    #         followers.c.followed_id == user.id).count() > 0
-    #
-    # def followed_posts(self):
-    #     followed = Post.query.join(
-    #         followers, (followers.c.followed_id == Post.user_id)).filter(
-    #             followers.c.follower_id == self.id)
-    #     own = Post.query.filter_by(user_id=self.id)
-    #     return followed.union(own).order_by(Post.timestamp.desc())
 
     def to_dict(self):
         data = {
@@ -94,10 +77,16 @@ class User(db.Model):
             return None
         return user
 
+    def followed_projects(self):
+        followed = self.projects
+        own = Project.query.filter_by(owner_name=self.username)
+        return followed.union(own).order_by(Project.timestamp.desc())
+
 
 class Project(db.Model):
     id = db.Column(db.Integer, primary_key=True)
-    project_name = db.Column(db.String(255), index=True, unique=True)
+    project_name = db.Column(db.String(255), index=True, unique=True, nullable=False)
+    owner_name = db.Column(db.String(255), index=True, nullable=False)
     timestamp = db.Column(db.DateTime, index=True, default=datetime.now)
     modules = db.relationship('Module', backref='project', lazy='dynamic')
     envs = db.relationship('Env', backref='project', lazy='dynamic')
@@ -118,6 +107,7 @@ class Project(db.Model):
         data = {
             'id': self.id,
             'project_name': self.project_name,
+            'project_owner': self.project_owner,
             'timestamp': self.timestamp,
             'modules_count': self.modules.count(),
             'scenes_count': self.scenes.count(),
@@ -127,13 +117,20 @@ class Project(db.Model):
         }
         return data
 
-    def add_user(self, user):
-        self.users.append(user)
-        db.session.add(self)
+    def follow(self, user):
+        if not self.is_following(user):
+            self.users.append(user)
+
+    def unfollow(self, user):
+        if self.is_following(user):
+            self.users.remove(user)
+
+    def is_following(self, user):
+        return user in self.users.all()
 
     @staticmethod
     def to_collection_dict(page_num, per_page):
-        projects = g.current_user.projects.paginate(page_num, per_page, False)
+        projects = g.current_user.followed_projects.paginate(page_num, per_page, False)
         data = {
             'project_items': [project.to_dict() for project in projects.items],
             'meta': {
