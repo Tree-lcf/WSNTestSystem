@@ -132,12 +132,6 @@ class TestRegLoginCase(unittest.TestCase):
         cookies = {'token': response.data.token}
         payload = {'project_name': 'app'}
         requests.post(self.add_project_url, cookies=cookies, json=payload)
-        payload = {
-            'project_name': 'app',
-            'username_list': ['003']
-        }
-        requests.post(self.project_has_user_url, cookies=cookies, json=payload)
-
         payload = {'pageNum': '1', 'perPage': '20'}
         response = requests.get(self.get_projects_url, cookies=cookies, params=payload).json()
         response = AttrDict(response)
