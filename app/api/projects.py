@@ -38,14 +38,14 @@ def create_project():
     project = Project.query.filter_by(project_name=project_name).first()
     if not project:
         return bad_request('create project fail')
-    project.add_user(g.current_user)
-
-    # admins = User.admins_list()
-    # if admins:
-    #     for admin in admins:
-    #         project.add_user(admin)
-
-    session_commit()
+    # project.add_user(g.current_user)
+    #
+    # # admins = User.admins_list()
+    # # if admins:
+    # #     for admin in admins:
+    # #         project.add_user(admin)
+    #
+    # session_commit()
     data = project.to_dict()
     response = trueReturn(data, 'create project successfully')
     # response.status_code = 201
