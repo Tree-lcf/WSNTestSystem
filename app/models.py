@@ -3,10 +3,11 @@ import os
 from app import db
 from datetime import datetime, timedelta
 from werkzeug.security import generate_password_hash, check_password_hash
+from flask import g
 
 project_user = db.Table('project_user',
-                        db.Column('project_id', db.Integer, db.ForeignKey('project.id'), nullable=False),
-                        db.Column('user_id', db.Integer, db.ForeignKey('user.id'), nullable=False)
+                        db.Column('project_id', db.Integer, db.ForeignKey('project.id'), primary_key=True),
+                        db.Column('user_id', db.Integer, db.ForeignKey('user.id'), primary_key=True)
                         )
 
 
@@ -119,6 +120,25 @@ class Project(db.Model):
             'users_count': self.users.count(),
             'users_list': [user.username for user in self.users.order_by(User.username).all()]
         }
+        return data
+
+    def add_user(self, user):
+        self.users.append(user)
+        db.session.add(self)
+
+    @staticmethod
+    def to_collection_dict(page_num, per_page):
+        projects = g.current_user.projects.paginate(page_num, per_page, False)
+        data = {
+            'project_items': [project.to_dict() for project in projects.items],
+            'meta': {
+                'has_next': projects.has_next,
+                'next_num': projects.next_num,
+                'has_prev': projects.has_prev,
+                'prev_num': projects.prev_num
+            }
+        }
+
         return data
 
 

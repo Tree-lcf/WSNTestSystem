@@ -9,26 +9,16 @@ from app.common import session_commit
 @bp.before_request
 def before_request():
     token = request.cookies.get('token')
-    print(token)
     if not verify_token(token):
         return token_auth_error()
 
 
 @bp.route('/projects', methods=['GET'])
 def get_projects():
-    pageNum = request.args.get('pageNum', 1, type=int)
-    perPage = request.args.get('perPage', 10, type=int)
-    projects = g.current_user.projects.paginate(pageNum, perPage, False)
-    print(projects.items)
-    data = {
-        'projects_info': [project.to_dict() for project in projects.items],
-        'has_next': projects.has_next,
-        'next_num': projects.next_num,
-        'has_prev': projects.has_prev,
-        'prev_num': projects.prev_num
-    }
-
-    response = trueReturn(data, '请求成功')
+    page_num = request.args.get('page_num', 1, type=int)
+    per_page = request.args.get('per_page', 10, type=int)
+    projects_info = Project.to_collection_dict(page_num, per_page)
+    response = trueReturn(projects_info, '请求成功')
     return response
 
 
@@ -65,35 +55,47 @@ def project_has_user():
         return bad_request('项目不存在，请新建')
 
     for username in username_list:
-        print(username)
-        type(username)
+        # print(username)
+        # type(username)
         user = User.query.filter_by(username=username).first()
-        print(user)
         if not user:
             return bad_request('用户 %s 不存在' % username)
-        project.users.append(user)
+        project.add_user(user)
+        session_commit()
 
     data = project.to_dict()
     response = trueReturn(data, '该项目添加用户成功')
+    # print(data)
     # response.status_code = 201
     return response
 
 
+@bp.route('/project/<int:id>', methods=['GET'])
+def get_project(id):
+    return jsonify(Project.query.get_or_404(id).to_dict())
 #
-# @bp.route('/projects/add', methods=['POST'])
-# def add_project():
-#     data = request.get_json() or {}
-#     project_name = data.get('project_name')
-#     usernameList = data.get('usernameList')
-#     for username in usernameList:
-#         user = User.query.filter_by(username == username).first()
-#         if user:
+# def get_project(id):
+#     project = Project
+#     user = User.query.get_or_404(id)
+#     page = request.args.get('page', 1, type=int)
+#     per_page = min(request.args.get('per_page', 10, type=int), 100)
+#     data = User.to_collection_dict(user.followers, page, per_page,
+#                                    'api.get_followers', id=id)
+#     return jsonify(data)
+#     # print(g.current_user.projects.all())
+#     # print(projects.items)
+#     data = {
+#         'projects_info': [project.to_dict() for project in projects.items],
+#         'has_next': projects.has_next,
+#         'next_num': projects.next_num,
+#         'has_prev': projects.has_prev,
+#         'prev_num': projects.prev_num
+#     }
+#
+#     response = trueReturn(data, '请求成功')
+#     return response
 
-# @bp.route('/api/<project_id>/<module_id>', methods=['GET'])
-# def get_user(id):
-#     pass
-#
-#
+
 # @bp.route('/user/<int:id>/followers', methods=['GET'])
 # def get_followers(id):
 #     pass
