@@ -1,4 +1,5 @@
 from app import db
+from flask import request
 
 
 def session_commit():

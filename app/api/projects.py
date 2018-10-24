@@ -1,8 +1,8 @@
 from app.api import bp
-from flask import jsonify, request, g
+from flask import request, g
 from app.models import *
 from app.auth.auth import verify_token, token_auth_error
-from app.errors import trueReturn, bad_request
+from app.errors import trueReturn, bad_request, error_response
 from app.common import session_commit
 
 
@@ -13,7 +13,7 @@ def before_request():
         return token_auth_error()
 
 
-@bp.route('/projects', methods=['GET'])
+@bp.route('/projectsList', methods=['GET'])
 def get_projects():
     page_num = request.args.get('page_num', 1, type=int)
     per_page = request.args.get('per_page', 10, type=int)
@@ -22,24 +22,85 @@ def get_projects():
     return response
 
 
-@bp.route('/project', methods=['POST'])
-def add_project():
+@bp.route('/projectCreate', methods=['POST'])
+def create_project():
     data = request.get_json() or {}
     project_name = data.get('project_name')
     if not project_name:
         return bad_request('must include project name')
+
     if Project.query.filter_by(project_name=project_name).first():
         return bad_request('please use a different project name')
+
     project = Project(project_name=project_name)
     db.session.add(project)
     session_commit()
-    if project.id:
-        data = project.to_dict()
-        response = trueReturn(data, '新项目添加成功')
+    project = Project.query.filter_by(project_name=project_name).first()
+    if not project:
+        return bad_request('create project fail')
+    project.add_user(g.current_user)
+
+    # admins = User.admins_list()
+    # if admins:
+    #     for admin in admins:
+    #         project.add_user(admin)
+
+    session_commit()
+    data = project.to_dict()
+    response = trueReturn(data, 'create project successfully')
+    # response.status_code = 201
+    return response
+
+
+@bp.route('/projectInfo', methods=['GET'])
+def get_project_info():
+    project_name = request.args.get('project_name', type=str)
+    if not project_name:
+        return bad_request('must include project name')
+
+    project = g.current_user.projects.filter_by(project_name=project_name).first()
+
+    if not project:
+        return bad_request('%s is not the member of %s' % (g.current_user.username, project_name))
+
+    data = project.to_dict()
+    response = trueReturn(data, 'Success')
+    return response
+
+
+@bp.route('/projectDel', methods=['POST'])
+def delete_project():
+    data = request.get_json() or {}
+    project_name = data.get('project_name')
+    if not project_name:
+        return bad_request('must include project name')
+
+    project = g.current_user.projects.filter_by(project_name=project_name).first()
+
+    if not project:
+        return bad_request('%s is not the member of %s or not administrator, cannot delete it' % (g.current_user.username, project_name))
+
+    if project.users.first():
+        return bad_request('Cannot delete it as there are users in %s' % project_name)
+
+    if project.modules.first():
+        return bad_request('Cannot delete it as there are modules in %s' % project_name)
+
+    if project.envs.first():
+        return bad_request('Cannot delete it as there are envs in %s' % project_name)
+
+    if project.scenes.first():
+        return bad_request('Cannot delete it as there are scenes in %s' % project_name)
+
+    db.session.delete(project)
+    session_commit()
+
+    if not Project.query.filter_by(project_name=project_name).first():
+        response = trueReturn(message='delete project successfully')
         # response.status_code = 201
         return response
     else:
-        return bad_request('新项目添加失败')
+        return bad_request('delete project fail')
 
 
 @bp.route('/project_has_user', methods=['POST'])
@@ -70,9 +131,7 @@ def project_has_user():
     return response
 
 
-@bp.route('/project/<int:id>', methods=['GET'])
-def get_project(id):
-    return jsonify(Project.query.get_or_404(id).to_dict())
+
 #
 # def get_project(id):
 #     project = Project

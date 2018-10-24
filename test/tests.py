@@ -52,9 +52,11 @@ class TestRegLoginCase(unittest.TestCase):
         self.register_url = host + '/auth/register'
         self.login_url = host + '/auth/login'
         self.logout_url = host + '/auth/logout'
-        self.get_projects_url = host + '/api/projects'
-        self.add_project_url = host + '/api/project'
+        self.get_projects_url = host + '/api/projectsList'
+        self.add_project_url = host + '/api/projectCreate'
         self.project_has_user_url = host + '/api/project_has_user'
+        self.get_project_url = host + '/api/projectInfo'
+        self.del_project_url = host + '/api/projectDel'
 
     def tearDown(self):
         db.session.remove()
@@ -64,8 +66,8 @@ class TestRegLoginCase(unittest.TestCase):
             db.session.delete(user)
             db.session.delete(project)
             db.session.commit()
-        except Exception:
-            pass
+        except Exception as error:
+            print(error)
 
         self.app_context.pop()
 
@@ -194,6 +196,46 @@ class TestRegLoginCase(unittest.TestCase):
         response = AttrDict(response)
         print(response)
         self.assertFalse(response.status)
+
+    def test_getProject_success(self):
+        requests.post(self.register_url, json=self.reg_data)
+        response = requests.post(self.login_url, json=self.login_data).json()
+        response = AttrDict(response)
+        cookies = {'token': response.data.token}
+        payload = {'project_name': 'app'}
+        requests.post(self.add_project_url, cookies=cookies, json=payload)
+        response = requests.get(self.get_project_url, cookies=cookies, params=payload).json()
+        response = AttrDict(response)
+        print(response)
+        self.assertTrue(response.status)
+        self.assertTrue(len(response.data) > 0)
+
+    def test_getProject_fail(self):
+        requests.post(self.register_url, json=self.reg_data)
+        response = requests.post(self.login_url, json=self.login_data).json()
+        response = AttrDict(response)
+        cookies = {'token': response.data.token}
+        payload = {'project_name': 'app'}
+        requests.post(self.add_project_url, cookies=cookies, json=payload)
+        payload = {'project_name': 'aa'}
+        response = requests.get(self.get_project_url, cookies=cookies, params=payload).json()
+        response = AttrDict(response)
+        print(response)
+        self.assertFalse(response.status)
+
+    def test_delProject_success(self):
+        requests.post(self.register_url, json=self.reg_data)
+        response = requests.post(self.login_url, json=self.login_data).json()
+        response = AttrDict(response)
+        cookies = {'token': response.data.token}
+        payload = {'project_name': 'app'}
+        requests.post(self.add_project_url, cookies=cookies, json=payload)
+        response = requests.get(self.get_project_url, cookies=cookies, params=payload).json()
+        response = AttrDict(response)
+        print(response)
+        self.assertTrue(response.status)
+        self.assertTrue(len(response.data) > 0)
+
 
 
 

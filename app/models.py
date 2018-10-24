@@ -6,8 +6,8 @@ from werkzeug.security import generate_password_hash, check_password_hash
 from flask import g
 
 project_user = db.Table('project_user',
-                        db.Column('project_id', db.Integer, db.ForeignKey('project.id'), primary_key=True),
-                        db.Column('user_id', db.Integer, db.ForeignKey('user.id'), primary_key=True)
+                        db.Column('project_id', db.Integer, db.ForeignKey('project.id')),
+                        db.Column('user_id', db.Integer, db.ForeignKey('user.id'))
                         )
 
 
@@ -31,6 +31,11 @@ class User(db.Model):
 
     def check_password(self, password):
         return check_password_hash(self.password_hash, password)
+
+    @staticmethod
+    def admins_list():
+        admins = User.query.filter_by(is_administrator=True).all()
+        return admins
 
     def add(self):
         db.session.add(self)
