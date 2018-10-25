@@ -82,6 +82,20 @@ class User(db.Model):
         own = Project.query.filter_by(owner_name=self.username)
         return followed.union(own).order_by(Project.timestamp.desc())
 
+    @staticmethod
+    def to_collection_dict(page_num, per_page):
+        users = User.query.paginate(page_num, per_page, False)
+        data = {
+            'users': [user.to_dict() for user in users.items],
+            'meta': {
+                'has_next': users.has_next,
+                'next_num': users.next_num,
+                'has_prev': users.has_prev,
+                'prev_num': users.prev_num
+            }
+        }
+        return data
+
 
 class Project(db.Model):
     id = db.Column(db.Integer, primary_key=True)
@@ -140,7 +154,6 @@ class Project(db.Model):
                 'prev_num': projects.prev_num
             }
         }
-
         return data
 
 

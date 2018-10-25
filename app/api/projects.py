@@ -1,8 +1,8 @@
 from app.api import bp
-from flask import request, g
+from flask import request
 from app.models import *
 from app.auth.auth import verify_token, token_auth_error
-from app.errors import trueReturn, bad_request, error_response
+from app.errors import trueReturn, bad_request
 from app.common import session_commit
 
 
@@ -76,7 +76,7 @@ def update_project():
 
     if new_owner_name and new_owner_name != origin_owner_name and \
             not User.query.filter_by(username=new_owner_name).first():
-        return bad_request('please use a registered username')
+        return bad_request('user %s not registers yet' % new_owner_name)
     if new_project_name and new_project_name != origin_project_name and \
             Project.query.filter_by(project_name=new_project_name).first():
         return bad_request('please use a different project name')
@@ -149,37 +149,52 @@ def delete_project():
         return bad_request('delete project fail')
 
 
-@bp.route('/project_has_user', methods=['POST'])
-def project_has_user():
+@bp.route('/projectLinkUser', methods=['POST'])
+def project_link_user():
     data = request.get_json() or {}
     project_name = data.get('project_name')
     username_list = data.get('username_list')
+    follow_type = data.get('follow_type')  # follow = 1, unfollow = 2
 
+    if not follow_type or follow_type not in ['1', '2']:
+        return bad_request('follow_type error')
     if not project_name:
         return bad_request('must include project name')
     project = Project.query.filter_by(project_name=project_name).first()
     if not project:
-        return bad_request('项目不存在，请新建')
+        return bad_request('project does not exist')
 
     for username in username_list:
         # print(username)
         # type(username)
         user = User.query.filter_by(username=username).first()
         if not user:
-            return bad_request('用户 %s 不存在' % username)
-        if user in project.users.all():
-            return bad_request('用户 %s 已添加' % username)
-        if user.username == project.owner_name:
-            return bad_request('用户 %s 是该项目Owner，无需添加' % username)
-        project.follow(user)
-        session_commit()
+            return bad_request('user %s does not exist' % username)
 
+        if follow_type == '1':
+            if user in project.users.all():
+                return bad_request('user %s is already in project %s' % (username, project_name))
+            if user.username == project.owner_name:
+                return bad_request('user %s is the owner of this project，not need to add' % username)
+            project.follow(user)
+
+        if follow_type == '2':
+            if user not in project.users.all():
+                return bad_request('user %s is not in project %s' % (username, project_name))
+            if user.username == project.owner_name:
+                return bad_request('user %s is the owner of this project，cannot remove it' % username)
+            project.unfollow(user)
+
+    session_commit()
     data = project.to_dict()
-    response = trueReturn(data, '该项目添加用户成功')
-    # print(data)
-    # response.status_code = 201
-    return response
 
+    if follow_type == '1':
+        response = trueReturn(data, 'add users into project %s success' % project_name)
+        return response
+
+    if follow_type == '2':
+        response = trueReturn(data, 'remove users from project %s success' % project_name)
+        return response
 
 
 #

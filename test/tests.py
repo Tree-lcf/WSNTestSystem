@@ -59,23 +59,27 @@ class TestRegLoginCase(unittest.TestCase):
         self.logout_url = host + '/auth/logout'
         self.get_projects_url = host + '/api/projectsList'
         self.add_project_url = host + '/api/projectCreate'
-        self.project_has_user_url = host + '/api/project_has_user'
+        self.project_has_user_url = host + '/api/projectLinkUser'
         self.get_project_url = host + '/api/projectInfo'
         self.del_project_url = host + '/api/projectDel'
         self.update_project_url = host + '/api/projectUpdate'
+        self.get_users_url = host + '/api/users'
 
     def tearDown(self):
         db.session.remove()
         user1 = User.query.filter_by(username='003').first()
         user2 = User.query.filter_by(username='007').first()
-        project = Project.query.filter_by(project_name='app').first()
+        project1 = Project.query.filter_by(project_name='app').first()
+        project2 = Project.query.filter_by(project_name='cpp').first()
         # try:
         if user1:
             db.session.delete(user1)
         if user2:
             db.session.delete(user2)
-        if project:
-            db.session.delete(project)
+        if project1:
+            db.session.delete(project1)
+        if project2:
+            db.session.delete(project2)
         db.session.commit()
         # except Exception as error:
         #     print(error)
@@ -146,7 +150,7 @@ class TestRegLoginCase(unittest.TestCase):
             'owner_name': ['003']
         }
         requests.post(self.add_project_url, cookies=cookies, json=payload)
-        payload = {'pageNum': '1', 'perPage': '20'}
+        payload = {'page_num': '1', 'per_page': '20'}
         response = requests.get(self.get_projects_url, cookies=cookies, params=payload).json()
         response = AttrDict(response)
         print(response)
@@ -187,7 +191,8 @@ class TestRegLoginCase(unittest.TestCase):
         requests.post(self.register_url, json=self.reg_data_copy)
         payload = {
             'project_name': 'app',
-            'username_list': ['007']
+            'username_list': ['007'],
+            'follow_type': '1'
         }
         response = requests.post(self.project_has_user_url, cookies=cookies, json=payload).json()
         response = AttrDict(response)
@@ -207,7 +212,8 @@ class TestRegLoginCase(unittest.TestCase):
 
         payload = {
             'project_name': 'app',
-            'username_list': ['007']
+            'username_list': ['007'],
+            'follow_type': '1'
         }
         response = requests.post(self.project_has_user_url, cookies=cookies, json=payload).json()
         response = AttrDict(response)
@@ -227,7 +233,8 @@ class TestRegLoginCase(unittest.TestCase):
 
         payload = {
             'project_name': 'app1',
-            'username_list': ['006']
+            'username_list': ['006'],
+            'follow_type': '1'
         }
         response = requests.post(self.project_has_user_url, cookies=cookies, json=payload).json()
         response = AttrDict(response)
@@ -247,12 +254,14 @@ class TestRegLoginCase(unittest.TestCase):
         requests.post(self.register_url, json=self.reg_data_copy)
         payload = {
             'project_name': 'app',
-            'username_list': ['007']
+            'username_list': ['007'],
+            'follow_type': '1'
         }
         requests.post(self.project_has_user_url, cookies=cookies, json=payload)
         payload = {
             'project_name': 'app',
-            'username_list': ['007']
+            'username_list': ['007'],
+            'follow_type': '1'
         }
         response = requests.post(self.project_has_user_url, cookies=cookies, json=payload).json()
         response = AttrDict(response)
@@ -272,7 +281,64 @@ class TestRegLoginCase(unittest.TestCase):
 
         payload = {
             'project_name': 'app',
-            'username_list': ['003']
+            'username_list': ['003'],
+            'follow_type': '1'
+        }
+        response = requests.post(self.project_has_user_url, cookies=cookies, json=payload).json()
+        response = AttrDict(response)
+        print(response)
+        self.assertFalse(response.status)
+
+    def test_project_unfollow_user_success(self):
+        requests.post(self.register_url, json=self.reg_data)
+        response = requests.post(self.login_url, json=self.login_data).json()
+        response = AttrDict(response)
+        cookies = {'token': response.data.token}
+        payload = {
+            'project_name': 'app',
+            'owner_name': '003'
+        }
+        requests.post(self.add_project_url, cookies=cookies, json=payload)
+        requests.post(self.register_url, json=self.reg_data_copy)
+        payload = {
+            'project_name': 'app',
+            'username_list': ['007'],
+            'follow_type': '1'
+        }
+        response = requests.post(self.project_has_user_url, cookies=cookies, json=payload).json()
+        print(response)
+        payload = {
+            'project_name': 'app',
+            'username_list': ['007'],
+            'follow_type': '2'
+        }
+        response = requests.post(self.project_has_user_url, cookies=cookies, json=payload).json()
+        response = AttrDict(response)
+        print(response)
+        self.assertTrue(response.status)
+
+    def test_project_unfollow_user_fail(self):
+        requests.post(self.register_url, json=self.reg_data)
+        response = requests.post(self.login_url, json=self.login_data).json()
+        response = AttrDict(response)
+        cookies = {'token': response.data.token}
+        payload = {
+            'project_name': 'app',
+            'owner_name': '003'
+        }
+        requests.post(self.add_project_url, cookies=cookies, json=payload)
+        requests.post(self.register_url, json=self.reg_data_copy)
+        payload = {
+            'project_name': 'app',
+            'username_list': ['007'],
+            'follow_type': '1'
+        }
+        response = requests.post(self.project_has_user_url, cookies=cookies, json=payload).json()
+        print(response)
+        payload = {
+            'project_name': 'app',
+            'username_list': ['007'],
+            'follow_type': '3'
         }
         response = requests.post(self.project_has_user_url, cookies=cookies, json=payload).json()
         response = AttrDict(response)
@@ -369,10 +435,39 @@ class TestRegLoginCase(unittest.TestCase):
         print(response)
         self.assertTrue(response.status)
 
+    def test_update_project_fail(self):
+        requests.post(self.register_url, json=self.reg_data)
+        requests.post(self.register_url, json=self.reg_data_copy)
+        response = requests.post(self.login_url, json=self.login_data).json()
+        response = AttrDict(response)
+        cookies = {'token': response.data.token}
+        payload = {
+            'project_name': 'app',
+            'owner_name': '003'
+        }
+        requests.post(self.add_project_url, cookies=cookies, json=payload)
+        payload = {
+            'project_name': 'cpp',
+            'owner_name': '006',
+            'origin_project_name': 'app',
+            'origin_owner_name': '003'
+        }
+        response = requests.post(self.update_project_url, cookies=cookies, json=payload).json()
+        response = AttrDict(response)
+        print(response)
+        self.assertFalse(response.status)
 
-
-
-
+    def test_get_users_success(self):
+        requests.post(self.register_url, json=self.reg_data)
+        requests.post(self.register_url, json=self.reg_data_copy)
+        response = requests.post(self.login_url, json=self.login_data).json()
+        response = AttrDict(response)
+        cookies = {'token': response.data.token}
+        payload = {'page_num': '1', 'per_page': '20'}
+        response = requests.get(self.get_users_url, cookies=cookies, params=payload).json()
+        response = AttrDict(response)
+        print(response)
+        self.assertTrue(response.status)
 
 
 
