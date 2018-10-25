@@ -5,6 +5,15 @@ from datetime import datetime, timedelta
 from werkzeug.security import generate_password_hash, check_password_hash
 from flask import g
 
+
+# class FromAPIMixin(object):
+#     @staticmethod
+#     def from_dict(attr, data):
+#         for field in attr:
+#             if field in data:
+#                 setattr(field, data[field])
+
+
 project_user = db.Table('project_user',
                         db.Column('project_id', db.Integer, db.ForeignKey('project.id')),
                         db.Column('user_id', db.Integer, db.ForeignKey('user.id'))
@@ -166,6 +175,11 @@ class Module(db.Model):
 
     def __repr__(self):
         return '<Module {}>'.format(self.name)
+
+    def from_dict(self, data):
+        for field in ['module_name', 'project_id']:
+            if field in data:
+                setattr(self, field, data[field])
 
 
 class Env(db.Model):

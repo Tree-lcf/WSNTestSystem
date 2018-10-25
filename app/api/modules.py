@@ -1,5 +1,5 @@
 from app.api import bp
-from flask import request
+from flask import request, g
 from app.models import *
 from app.auth.auth import verify_token, token_auth_error
 from app.errors import trueReturn, bad_request
@@ -13,19 +13,60 @@ def before_request():
         return token_auth_error()
 
 
-@bp.route('/projectsList', methods=['GET'])
-def get_projects():
-    page_num = request.args.get('page_num', 1, type=int)
-    per_page = request.args.get('per_page', 10, type=int)
-    projects_info = Project.to_collection_dict(page_num, per_page)
-    response = trueReturn(projects_info, '请求成功')
-    return response
-
-
-@bp.route('/projectCreate', methods=['POST'])
-def create_project():
+@bp.route('/modulesCreateOrDel', methods=['POST'])
+def create_or_del_modules():
     data = request.get_json() or {}
     project_name = data.get('project_name')
+    module_name_list = data.get('module_name_list')
+    oper_type = data.get('oper_type')  # create = 1, del = 2
+
+    if not oper_type or oper_type not in ['1', '2']:
+        return bad_request('follow_type error')
+
+    if not project_name:
+        return bad_request('must include project name')
+
+    project = Project.query.filter_by(project_name=project_name).first()
+    if not project:
+        return bad_request('project does not exist')
+    if project.owner_name != g.current_user:
+        return bad_request('you are not the owner of project %s' % project_name)
+
+    for module_name in module_name_list:
+        if oper_type == '1':
+            module = Module.query.filter_by(module_name=module_name)
+            if module in project.modules.all():
+                return bad_request('there is %s already in project %s' % (module_name, project_name))
+
+            data = {
+                'module_name': module_name,
+                'project_id': project.id
+            }
+            module = Module()
+            module.from_dict(data)
+
+        if follow_type == '2':
+            if user not in project.users.all():
+                return bad_request('user %s is not in project %s' % (username, project_name))
+            if user.username == project.owner_name:
+                return bad_request('user %s is the owner of this project，cannot remove it' % username)
+            project.unfollow(user)
+
+    session_commit()
+    data = project.to_dict()
+
+    if follow_type == '1':
+        response = trueReturn(data, 'add users into project %s success' % project_name)
+        return response
+
+    if follow_type == '2':
+        response = trueReturn(data, 'remove users from project %s success' % project_name)
+        return response
+
+
+    data = request.get_json() or {}
+    project_name = data.get('project_name')
+
     owner_name = data.get('owner_name')
     if not project_name or not owner_name:
         return bad_request('must include project name or owner_name')
@@ -52,6 +93,18 @@ def create_project():
     response = trueReturn(data, 'create project successfully')
     # response.status_code = 201
     return response
+
+
+@bp.route('/projectsList', methods=['GET'])
+def get_projects():
+    page_num = request.args.get('page_num', 1, type=int)
+    per_page = request.args.get('per_page', 10, type=int)
+    projects_info = Project.to_collection_dict(page_num, per_page)
+    response = trueReturn(projects_info, '请求成功')
+    return response
+
+
+
 
 
 @bp.route('/projectUpdate', methods=['POST'])
