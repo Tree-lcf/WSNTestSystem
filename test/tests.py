@@ -347,6 +347,27 @@ class TestRegLoginCase(unittest.TestCase):
         print(response)
         self.assertFalse(response.status)
 
+    def test_update_project_success(self):
+        requests.post(self.register_url, json=self.reg_data)
+        requests.post(self.register_url, json=self.reg_data_copy)
+        response = requests.post(self.login_url, json=self.login_data).json()
+        response = AttrDict(response)
+        cookies = {'token': response.data.token}
+        payload = {
+            'project_name': 'app',
+            'owner_name': '003'
+        }
+        requests.post(self.add_project_url, cookies=cookies, json=payload)
+        payload = {
+            'project_name': 'cpp',
+            'owner_name': '007',
+            'origin_project_name': 'app',
+            'origin_owner_name': '003'
+        }
+        response = requests.post(self.update_project_url, cookies=cookies, json=payload).json()
+        response = AttrDict(response)
+        print(response)
+        self.assertTrue(response.status)
 
 
 

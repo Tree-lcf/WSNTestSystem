@@ -62,16 +62,21 @@ def update_project():
     new_owner_name = data.get('owner_name')
     new_project_name = data.get('project_name')
 
-    origin_user = User.query.filter_by(origin_owner_name)
+    origin_user = User.query.filter_by(username=origin_owner_name).first()
     if not origin_user:
         return bad_request('owner does not exist')
-    origin_project = Project.query.filter_by(origin_project_name)
+    origin_project = Project.query.filter_by(project_name=origin_project_name).first()
     if not origin_project:
-        return bad_request('%s project does not exist' % origin_project_name)
+        return bad_request('original project %s does not exist' % origin_project_name)
+
+    # print(g.current_user)
+    # print(origin_user)
+    if origin_user != g.current_user:
+        return bad_request('you are not the owner of %s project, cannot update it' % origin_project_name)
 
     if new_owner_name and new_owner_name != origin_owner_name and \
-            User.query.filter_by(username=new_owner_name).first():
-        return bad_request('please use a different username')
+            not User.query.filter_by(username=new_owner_name).first():
+        return bad_request('please use a registered username')
     if new_project_name and new_project_name != origin_project_name and \
             Project.query.filter_by(project_name=new_project_name).first():
         return bad_request('please use a different project name')
