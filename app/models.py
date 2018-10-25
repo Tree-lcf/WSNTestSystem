@@ -99,7 +99,7 @@ class Project(db.Model):
         return '<Project {}>'.format(self.name)
 
     def from_dict(self, data):
-        for field in ['project_name']:
+        for field in ['project_name', 'owner_name']:
             if field in data:
                 setattr(self, field, data[field])
 
@@ -107,7 +107,7 @@ class Project(db.Model):
         data = {
             'id': self.id,
             'project_name': self.project_name,
-            'project_owner': self.project_owner,
+            'project_owner': self.owner_name,
             'timestamp': self.timestamp,
             'modules_count': self.modules.count(),
             'scenes_count': self.scenes.count(),
@@ -130,7 +130,7 @@ class Project(db.Model):
 
     @staticmethod
     def to_collection_dict(page_num, per_page):
-        projects = g.current_user.followed_projects.paginate(page_num, per_page, False)
+        projects = g.current_user.followed_projects().paginate(page_num, per_page, False)
         data = {
             'project_items': [project.to_dict() for project in projects.items],
             'meta': {

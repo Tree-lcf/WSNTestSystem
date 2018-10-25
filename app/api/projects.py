@@ -27,7 +27,7 @@ def create_project():
     data = request.get_json() or {}
     project_name = data.get('project_name')
     owner_name = data.get('owner_name')
-    if not project_name or owner_name:
+    if not project_name or not owner_name:
         return bad_request('must include project name or owner_name')
 
     if Project.query.filter_by(project_name=project_name).first():
@@ -54,13 +54,48 @@ def create_project():
     return response
 
 
+@bp.route('/projectUpdate', methods=['POST'])
+def update_project():
+    data = request.get_json() or {}
+    origin_project_name = data.get('origin_project_name')
+    origin_owner_name = data.get('origin_owner_name')
+    new_owner_name = data.get('owner_name')
+    new_project_name = data.get('project_name')
+
+    origin_user = User.query.filter_by(origin_owner_name)
+    if not origin_user:
+        return bad_request('owner does not exist')
+    origin_project = Project.query.filter_by(origin_project_name)
+    if not origin_project:
+        return bad_request('%s project does not exist' % origin_project_name)
+
+    if new_owner_name and new_owner_name != origin_owner_name and \
+            User.query.filter_by(username=new_owner_name).first():
+        return bad_request('please use a different username')
+    if new_project_name and new_project_name != origin_project_name and \
+            Project.query.filter_by(project_name=new_project_name).first():
+        return bad_request('please use a different project name')
+
+    origin_project.from_dict(data)
+    db.session.add(origin_project)
+    session_commit()
+
+    project = Project.query.filter_by(project_name=new_project_name).first()
+    if not project:
+        return bad_request('update project fail')
+
+    data = project.to_dict()
+    response = trueReturn(data, 'update project successfully')
+    return response
+
+
 @bp.route('/projectInfo', methods=['GET'])
 def get_project_info():
     project_name = request.args.get('project_name', type=str)
     if not project_name:
         return bad_request('must include project name')
 
-    project = g.current_user.projects.filter_by(project_name=project_name).first()
+    project = g.current_user.followed_projects().filter_by(project_name=project_name).first()
 
     if not project:
         return bad_request('%s is not the member of %s' % (g.current_user.username, project_name))
@@ -77,10 +112,14 @@ def delete_project():
     if not project_name:
         return bad_request('must include project name')
 
-    project = g.current_user.projects.filter_by(project_name=project_name).first()
+    # project = g.current_user.projects.filter_by(project_name=project_name).first()
+    project = Project.query.filter_by(project_name=project_name).first()
 
     if not project:
-        return bad_request('%s is not the member of %s or not administrator, cannot delete it' % (g.current_user.username, project_name))
+        return bad_request('%s project does not exist' % project_name)
+
+    if project.owner_name != g.current_user.username:
+        return bad_request('you are not owner of %s project, cannot delete it' % project_name)
 
     if project.users.first():
         return bad_request('Cannot delete it as there are users in %s' % project_name)
@@ -125,7 +164,9 @@ def project_has_user():
             return bad_request('用户 %s 不存在' % username)
         if user in project.users.all():
             return bad_request('用户 %s 已添加' % username)
-        project.add_user(user)
+        if user.username == project.owner_name:
+            return bad_request('用户 %s 是该项目Owner，无需添加' % username)
+        project.follow(user)
         session_commit()
 
     data = project.to_dict()
