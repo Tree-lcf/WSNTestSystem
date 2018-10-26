@@ -2,7 +2,7 @@ from datetime import datetime, timedelta
 import unittest
 import requests
 from app import create_app, db
-from app.models import User, Project
+from app.models import User, Project, Module
 from config import Config
 from app.common import AttrDict
 
@@ -53,6 +53,18 @@ class TestRegLoginCase(unittest.TestCase):
             'username': '003',
             'password': '123'
         }
+        self.module_data = {
+            'module_name': 'app_module_1',
+            'project_name': 'app'
+        }
+        self.module_data_copy = {
+            'module_name': 'app_module_2',
+            'project_name': 'app'
+        }
+        self.module_info = {
+            'project_name': 'app',
+            'module_info_list': [{'origin_name': 'app_module_1', 'new_name': 'aa'}]
+        }
         host = 'http://127.0.0.1:5000'
         self.register_url = host + '/auth/register'
         self.login_url = host + '/auth/login'
@@ -64,6 +76,10 @@ class TestRegLoginCase(unittest.TestCase):
         self.del_project_url = host + '/api/projectDel'
         self.update_project_url = host + '/api/projectUpdate'
         self.get_users_url = host + '/api/users'
+        self.create_module_url = host + '/api/moduleCreate'
+        self.del_module_url = host + '/api/modulesDel'
+        self.update_module_url = host + '/api/modulesUpdate'
+        self.get_modules_url = host + '/api/moduleList'
 
     def tearDown(self):
         db.session.remove()
@@ -71,6 +87,10 @@ class TestRegLoginCase(unittest.TestCase):
         user2 = User.query.filter_by(username='007').first()
         project1 = Project.query.filter_by(project_name='app').first()
         project2 = Project.query.filter_by(project_name='cpp').first()
+        module1 = Module.query.filter_by(module_name='app_module_1').first()
+        module2 = Module.query.filter_by(module_name='app_module_2').first()
+        module3 = Module.query.filter_by(module_name='aa').first()
+        module4 = Module.query.filter_by(module_name='bb').first()
         # try:
         if user1:
             db.session.delete(user1)
@@ -80,6 +100,15 @@ class TestRegLoginCase(unittest.TestCase):
             db.session.delete(project1)
         if project2:
             db.session.delete(project2)
+        if module1:
+            db.session.delete(module1)
+        if module2:
+            db.session.delete(module2)
+        if module3:
+            db.session.delete(module3)
+        if module4:
+            db.session.delete(module4)
+
         db.session.commit()
         # except Exception as error:
         #     print(error)
@@ -469,7 +498,29 @@ class TestRegLoginCase(unittest.TestCase):
         print(response)
         self.assertTrue(response.status)
 
+    def test_get_modules_success(self):
+        requests.post(self.register_url, json=self.reg_data)
+        response = requests.post(self.login_url, json=self.login_data).json()
+        response = AttrDict(response)
+        cookies = {'token': response.data.token}
+        payload = {
+            'project_name': 'app',
+            'owner_name': '003'
+        }
+        requests.post(self.add_project_url, cookies=cookies, json=payload)
+        response = requests.post(self.create_module_url, cookies=cookies, json=self.module_data).json()
+        print(response)
+        requests.post(self.create_module_url, cookies=cookies, json=self.module_data_copy)
+        response = requests.post(self.get_modules_url, cookies=cookies, json=self.module_data).json()
+        print(response)
+        response = requests.post(self.del_module_url, cookies=cookies, json=self.module_data_copy).json()
+        print(response)
+        response = requests.post(self.update_module_url, cookies=cookies, json=self.module_info).json()
+        print(response)
 
+        # response = AttrDict(response)
+        # print(response)
+        # self.assertTrue(response.status)
 
     #     u1.unfollow(u2)
     #     db.session.commit()

@@ -1,5 +1,6 @@
 from app import db
 from flask import request
+import copy
 
 
 def session_commit():
@@ -30,6 +31,17 @@ class AttrDict(dict):
                 self.__dict__[key] = AttrDict(value)
             else:
                 self.__dict__[key] = value
+
+
+def check_repeat(origin_list):
+    _list = origin_list.copy()
+    new_list = list(set(_list))
+
+    for a in new_list:
+        if a in _list:
+            _list.remove(a)
+
+    return _list
 
 
 if __name__ == '__main__':

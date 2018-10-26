@@ -13,239 +13,160 @@ def before_request():
         return token_auth_error()
 
 
-@bp.route('/modulesCreateOrDel', methods=['POST'])
-def create_or_del_modules():
+@bp.route('/moduleList', methods=['POST'])
+def get_modules():
     data = request.get_json() or {}
     project_name = data.get('project_name')
-    module_name_list = data.get('module_name_list')
-    oper_type = data.get('oper_type')  # create = 1, del = 2
-
-    if not oper_type or oper_type not in ['1', '2']:
-        return bad_request('follow_type error')
-
     if not project_name:
         return bad_request('must include project name')
-
-    project = Project.query.filter_by(project_name=project_name).first()
-    if not project:
-        return bad_request('project does not exist')
-    if project.owner_name != g.current_user:
+    project = Project.query.filter_by(project_name=project_name).first_or_404()
+    if project.owner_name != g.current_user.username:
         return bad_request('you are not the owner of project %s' % project_name)
-
-    for module_name in module_name_list:
-        if oper_type == '1':
-            module = Module.query.filter_by(module_name=module_name)
-            if module in project.modules.all():
-                return bad_request('there is %s already in project %s' % (module_name, project_name))
-
-            data = {
-                'module_name': module_name,
-                'project_id': project.id
-            }
-            module = Module()
-            module.from_dict(data)
-
-        if follow_type == '2':
-            if user not in project.users.all():
-                return bad_request('user %s is not in project %s' % (username, project_name))
-            if user.username == project.owner_name:
-                return bad_request('user %s is the owner of this project，cannot remove it' % username)
-            project.unfollow(user)
-
-    session_commit()
-    data = project.to_dict()
-
-    if follow_type == '1':
-        response = trueReturn(data, 'add users into project %s success' % project_name)
-        return response
-
-    if follow_type == '2':
-        response = trueReturn(data, 'remove users from project %s success' % project_name)
-        return response
+    data = project.to_dict()['modules']
+    response = trueReturn(data, 'success')
+    return response
 
 
+@bp.route('/moduleCreate', methods=['POST'])
+def create_module():
     data = request.get_json() or {}
     project_name = data.get('project_name')
-
-    owner_name = data.get('owner_name')
-    if not project_name or not owner_name:
-        return bad_request('must include project name or owner_name')
-
-    if Project.query.filter_by(project_name=project_name).first():
-        return bad_request('please use a different project name')
-
-    if not User.query.filter_by(username=owner_name).first():
-        return bad_request('owner does not exist')
-
-    project = Project(project_name=project_name, owner_name=owner_name)
-    db.session.add(project)
-    session_commit()
-    project = Project.query.filter_by(project_name=project_name).first()
-    if not project:
-        return bad_request('create project fail')
-    # project.add_user(g.current_user)
-    # admins = User.admins_list()
-    # if admins:
-    #     for admin in admins:
-    #         project.add_user(admin)
-    # session_commit()
-    data = project.to_dict()
-    response = trueReturn(data, 'create project successfully')
-    # response.status_code = 201
-    return response
-
-
-@bp.route('/projectsList', methods=['GET'])
-def get_projects():
-    page_num = request.args.get('page_num', 1, type=int)
-    per_page = request.args.get('per_page', 10, type=int)
-    projects_info = Project.to_collection_dict(page_num, per_page)
-    response = trueReturn(projects_info, '请求成功')
-    return response
-
-
-
-
-
-@bp.route('/projectUpdate', methods=['POST'])
-def update_project():
-    data = request.get_json() or {}
-    origin_project_name = data.get('origin_project_name')
-    origin_owner_name = data.get('origin_owner_name')
-    new_owner_name = data.get('owner_name')
-    new_project_name = data.get('project_name')
-
-    origin_user = User.query.filter_by(username=origin_owner_name).first()
-    if not origin_user:
-        return bad_request('owner does not exist')
-    origin_project = Project.query.filter_by(project_name=origin_project_name).first()
-    if not origin_project:
-        return bad_request('original project %s does not exist' % origin_project_name)
-
-    # print(g.current_user)
-    # print(origin_user)
-    if origin_user != g.current_user:
-        return bad_request('you are not the owner of %s project, cannot update it' % origin_project_name)
-
-    if new_owner_name and new_owner_name != origin_owner_name and \
-            not User.query.filter_by(username=new_owner_name).first():
-        return bad_request('user %s not registers yet' % new_owner_name)
-    if new_project_name and new_project_name != origin_project_name and \
-            Project.query.filter_by(project_name=new_project_name).first():
-        return bad_request('please use a different project name')
-
-    origin_project.from_dict(data)
-    db.session.add(origin_project)
-    session_commit()
-
-    project = Project.query.filter_by(project_name=new_project_name).first()
-    if not project:
-        return bad_request('update project fail')
-
-    data = project.to_dict()
-    response = trueReturn(data, 'update project successfully')
-    return response
-
-
-@bp.route('/projectInfo', methods=['GET'])
-def get_project_info():
-    project_name = request.args.get('project_name', type=str)
+    module_name = data.get('module_name')
     if not project_name:
         return bad_request('must include project name')
-
-    project = g.current_user.followed_projects().filter_by(project_name=project_name).first()
-
-    if not project:
-        return bad_request('%s is not the member of %s' % (g.current_user.username, project_name))
-
-    data = project.to_dict()
-    response = trueReturn(data, 'Success')
-    return response
-
-
-@bp.route('/projectDel', methods=['POST'])
-def delete_project():
-    data = request.get_json() or {}
-    project_name = data.get('project_name')
-    if not project_name:
-        return bad_request('must include project name')
-
-    # project = g.current_user.projects.filter_by(project_name=project_name).first()
-    project = Project.query.filter_by(project_name=project_name).first()
-
-    if not project:
-        return bad_request('%s project does not exist' % project_name)
+    project = Project.query.filter_by(project_name=project_name).first_or_404()
 
     if project.owner_name != g.current_user.username:
-        return bad_request('you are not owner of %s project, cannot delete it' % project_name)
+        return bad_request('you are not the owner of project %s' % project_name)
 
-    if project.users.first():
-        return bad_request('Cannot delete it as there are users in %s' % project_name)
+    module = Module.query.filter_by(module_name=module_name).first()
+    if module:
+        return bad_request('there is module %s in this project %s' % (module_name, project_name))
 
-    if project.modules.first():
-        return bad_request('Cannot delete it as there are modules in %s' % project_name)
-
-    if project.envs.first():
-        return bad_request('Cannot delete it as there are envs in %s' % project_name)
-
-    if project.scenes.first():
-        return bad_request('Cannot delete it as there are scenes in %s' % project_name)
-
-    db.session.delete(project)
+    data = {
+        'module_name': module_name,
+        'project_id': project.id
+    }
+    module = Module()
+    module.from_dict(data)
+    db.session.add(module)
     session_commit()
-
-    if not Project.query.filter_by(project_name=project_name).first():
-        response = trueReturn(message='delete project successfully')
-        # response.status_code = 201
-        return response
-    else:
-        return bad_request('delete project fail')
+    data = project.to_dict()['modules']
+    response = trueReturn(data, 'success')
+    return response
 
 
-@bp.route('/projectLinkUser', methods=['POST'])
-def project_link_user():
+@bp.route('/modulesDel', methods=['POST'])
+def delete_module():
     data = request.get_json() or {}
     project_name = data.get('project_name')
-    username_list = data.get('username_list')
-    follow_type = data.get('follow_type')  # follow = 1, unfollow = 2
-
-    if not follow_type or follow_type not in ['1', '2']:
-        return bad_request('follow_type error')
+    module_name = data.get('module_name')
     if not project_name:
         return bad_request('must include project name')
-    project = Project.query.filter_by(project_name=project_name).first()
-    if not project:
-        return bad_request('project does not exist')
+    project = Project.query.filter_by(project_name=project_name).first_or_404()
+    if project.owner_name != g.current_user.username:
+        return bad_request('you are not the owner of project %s' % project_name)
 
-    for username in username_list:
-        # print(username)
-        # type(username)
-        user = User.query.filter_by(username=username).first()
-        if not user:
-            return bad_request('user %s does not exist' % username)
+    module = Module.query.filter_by(module_name=module_name).first_or_404()
+    db.session.delete(module)
+    session_commit()
+    data = project.to_dict()['modules']
+    response = trueReturn(data, 'success')
+    return response
 
-        if follow_type == '1':
-            if user in project.users.all():
-                return bad_request('user %s is already in project %s' % (username, project_name))
-            if user.username == project.owner_name:
-                return bad_request('user %s is the owner of this project，not need to add' % username)
-            project.follow(user)
 
-        if follow_type == '2':
-            if user not in project.users.all():
-                return bad_request('user %s is not in project %s' % (username, project_name))
-            if user.username == project.owner_name:
-                return bad_request('user %s is the owner of this project，cannot remove it' % username)
-            project.unfollow(user)
+@bp.route('/modulesUpdate', methods=['POST'])
+def update_module():
+    data = request.get_json() or {}
+    project_name = data.get('project_name')
+    module_info_list = data.get('module_info_list')
+    '''
+    module_info_list: [{'origin_name1':'','new_name1':''},{'origin_name2':'','new_name2':''}]    
+    '''
+    if not project_name:
+        return bad_request('must include project name')
+    project = Project.query.filter_by(project_name=project_name).first_or_404()
+    if project.owner_name != g.current_user.username:
+        return bad_request('you are not the owner of project %s' % project_name)
+
+    if not module_info_list:
+        return bad_request('please input info')
+
+    new_name_list = []
+    for module_info in module_info_list:
+        origin_name = module_info['origin_name']
+        new_name = module_info['new_name']
+        module = Module.query.filter_by(module_name=origin_name).first_or_404()
+
+        if not new_name:
+            continue
+
+        if new_name == '':
+            return bad_request('please input a new module name')
+
+        if Module.query.filter_by(module_name=new_name).first() or new_name in new_name_list:
+            return bad_request('please use a different module name')
+
+        module.module_name = new_name
+        db.session.add(module)
+        new_name_list.append(new_name)
 
     session_commit()
-    data = project.to_dict()
+    data = project.to_dict()['modules']
+    response = trueReturn(data, 'success')
+    return response
 
-    if follow_type == '1':
-        response = trueReturn(data, 'add users into project %s success' % project_name)
-        return response
+#
+# @bp.route('/modules', methods=['POST'])
+# def operate_modules():
+#     data = request.get_json() or {}
+#     project_name = data.get('project_name')
+#     oper_type = data.get('oper_type')  # query = 1, update = 2
+#
+#     if not oper_type or oper_type not in ['1', '2']:
+#         return bad_request('oper_type error')
+#
+#     if not project_name:
+#         return bad_request('must include project name')
+#
+#     project = Project.query.filter_by(project_name=project_name).first_or_404()
+#
+#     if project.owner_name != g.current_user:
+#         return bad_request('you are not the owner of project %s' % project_name)
+#
+#     if oper_type == '1':
+#         data = project.to_dict()
+#         response = trueReturn(data, 'success')
+#         return response
+#
+#     else:
+#         module_name_list = set(data.get('module_name_list'))
+#         for module_name in module_name_list:
+#             module = Module.query.filter_by(module_name=module_name).first()
+#             if module in project.modules.all():
+#                 return bad_request('there is %s already in project %s' % (module_name, project_name))
+#             data = {
+#                 'module_name': module_name,
+#                 'project_id': project.id
+#             }
+#             module = Module()
+#             module.from_dict(data)
+#             db.session.add(module)
+#             session_commit()
+#
+#             if oper_type == '2':
+#                 if module not in project.modules.all():
+#                     return bad_request('there is not module %s in project %s' % (module_name, project_name))
+#                 db.session.delete(module)
+#
+#     data = project.to_dict()
+#
+#     if follow_type == '1':
+#         response = trueReturn(data, 'add users into project %s success' % project_name)
+#         return response
+#
+#     if follow_type == '2':
+#         response = trueReturn(data, 'remove users from project %s success' % project_name)
+#         return response
 
-    if follow_type == '2':
-        response = trueReturn(data, 'remove users from project %s success' % project_name)
-        return response
 

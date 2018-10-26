@@ -132,11 +132,16 @@ class Project(db.Model):
             'project_name': self.project_name,
             'project_owner': self.owner_name,
             'timestamp': self.timestamp,
-            'modules_count': self.modules.count(),
+            'modules': {
+                'count': self.modules.count(),
+                'list': [module.module_name for module in self.modules.order_by(Module.timestamp.desc()).all()]
+            },
             'scenes_count': self.scenes.count(),
             'envs_count': self.envs.count(),
-            'users_count': self.users.count(),
-            'users_list': [user.username for user in self.users.order_by(User.username).all()]
+            'users': {
+                'count': self.users.count(),
+                'list': [user.username for user in self.users.order_by(User.username).all()]
+            }
         }
         return data
 
@@ -180,6 +185,25 @@ class Module(db.Model):
         for field in ['module_name', 'project_id']:
             if field in data:
                 setattr(self, field, data[field])
+    #
+    # def to_dict(self):
+    #     data = {
+    #         'id': self.id,
+    #         'project_name': self.project_name,
+    #         'project_owner': self.owner_name,
+    #         'timestamp': self.timestamp,
+    #         'modules': {
+    #             'count': self.modules.count(),
+    #             'list': [module.module_name for module in self.modules.order_by(Module.timestamp.desc()).all()]
+    #         },
+    #         'scenes_count': self.scenes.count(),
+    #         'envs_count': self.envs.count(),
+    #         'users': {
+    #             'count': self.users.count(),
+    #             'list': [user.username for user in self.users.order_by(User.username).all()]
+    #         }
+    #     }
+    #     return data
 
 
 class Env(db.Model):
