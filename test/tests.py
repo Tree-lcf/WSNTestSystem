@@ -65,6 +65,36 @@ class TestRegLoginCase(unittest.TestCase):
             'project_name': 'app',
             'update_info_list': [{'origin_name': 'app_module_1', 'new_name': 'aa'}]
         }
+        self.moduleOperate_1 = {
+            'project_name': 'app',
+            'module_name': 'app_module_1',
+            'origin_name': None,
+            'operate_type': '1'
+        }
+        self.moduleOperate_1_1 = {
+            'project_name': 'app',
+            'module_name': 'app_module_2',
+            'origin_name': None,
+            'operate_type': '1'
+        }
+        self.moduleOperate_2 = {
+            'project_name': 'app',
+            'module_name': 'aa',
+            'origin_name': 'app_module_1',
+            'operate_type': '2'
+        }
+        self.moduleOperate_3 = {
+            'project_name': 'app',
+            'module_name': None,
+            'origin_name': None,
+            'operate_type': '3'
+        }
+        self.moduleOperate_4 = {
+            'project_name': 'app',
+            'module_name': None,
+            'origin_name': 'app_module_2',
+            'operate_type': '4'
+        }
         host = 'http://127.0.0.1:5000'
         self.register_url = host + '/auth/register'
         self.login_url = host + '/auth/login'
@@ -80,6 +110,7 @@ class TestRegLoginCase(unittest.TestCase):
         self.del_module_url = host + '/api/modulesDel'
         self.update_module_url = host + '/api/modulesUpdate'
         self.get_modules_url = host + '/api/moduleList'
+        self.moduleOperate_url = host + '/api/moduleOperate'
 
     def tearDown(self):
         db.session.remove()
@@ -498,7 +529,7 @@ class TestRegLoginCase(unittest.TestCase):
         print(response)
         self.assertTrue(response.status)
 
-    def test_get_modules_success(self):
+    def test_get_modules_success1(self):
         requests.post(self.register_url, json=self.reg_data)
         response = requests.post(self.login_url, json=self.login_data).json()
         response = AttrDict(response)
@@ -521,6 +552,34 @@ class TestRegLoginCase(unittest.TestCase):
         # response = AttrDict(response)
         # print(response)
         # self.assertTrue(response.status)
+
+    def test_get_modules_success(self):
+        requests.post(self.register_url, json=self.reg_data)
+        response = requests.post(self.login_url, json=self.login_data).json()
+        response = AttrDict(response)
+        cookies = {'token': response.data.token}
+        payload = {
+            'project_name': 'app',
+            'owner_name': '003'
+        }
+        requests.post(self.add_project_url, cookies=cookies, json=payload)
+
+        response = requests.post(self.moduleOperate_url, cookies=cookies, json=self.moduleOperate_1).json()
+        print(response)
+        response = requests.post(self.moduleOperate_url, cookies=cookies, json=self.moduleOperate_1_1).json()
+        print(response)
+        response = requests.post(self.moduleOperate_url, cookies=cookies, json=self.moduleOperate_3).json()
+        print(response)
+        response = requests.post(self.moduleOperate_url, cookies=cookies, json=self.moduleOperate_4).json()
+        print(response)
+        response = requests.post(self.moduleOperate_url, cookies=cookies, json=self.moduleOperate_2).json()
+        print(response)
+
+        # response = AttrDict(response)
+        # print(response)
+        # self.assertTrue(response.status)
+
+
 
     #     u1.unfollow(u2)
     #     db.session.commit()

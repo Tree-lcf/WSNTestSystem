@@ -185,25 +185,19 @@ class Module(db.Model):
         for field in ['module_name', 'project_id']:
             if field in data:
                 setattr(self, field, data[field])
-    #
-    # def to_dict(self):
-    #     data = {
-    #         'id': self.id,
-    #         'project_name': self.project_name,
-    #         'project_owner': self.owner_name,
-    #         'timestamp': self.timestamp,
-    #         'modules': {
-    #             'count': self.modules.count(),
-    #             'list': [module.module_name for module in self.modules.order_by(Module.timestamp.desc()).all()]
-    #         },
-    #         'scenes_count': self.scenes.count(),
-    #         'envs_count': self.envs.count(),
-    #         'users': {
-    #             'count': self.users.count(),
-    #             'list': [user.username for user in self.users.order_by(User.username).all()]
-    #         }
-    #     }
-    #     return data
+
+    def to_dict(self):
+        data = {
+            'id': self.id,
+            'module_name': self.module_name,
+            'project_id': self.project_id,
+            'timestamp': self.timestamp,
+            'apis': {
+                'count': self.apis.count(),
+                'list': [api.api_name for api in self.apis.order_by(Api.timestamp.desc()).all()]
+            }
+        }
+        return data
 
 
 class Env(db.Model):
