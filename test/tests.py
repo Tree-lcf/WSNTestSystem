@@ -63,7 +63,7 @@ class TestRegLoginCase(unittest.TestCase):
         }
         self.module_info = {
             'project_name': 'app',
-            'module_info_list': [{'origin_name': 'app_module_1', 'new_name': 'aa'}]
+            'update_info_list': [{'origin_name': 'app_module_1', 'new_name': 'aa'}]
         }
         host = 'http://127.0.0.1:5000'
         self.register_url = host + '/auth/register'

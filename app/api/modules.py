@@ -20,6 +20,7 @@ def get_modules():
     if not project_name:
         return bad_request('must include project name')
     project = Project.query.filter_by(project_name=project_name).first_or_404()
+
     if project.owner_name != g.current_user.username:
         return bad_request('you are not the owner of project %s' % project_name)
     data = project.to_dict()['modules']
@@ -79,9 +80,9 @@ def delete_module():
 def update_module():
     data = request.get_json() or {}
     project_name = data.get('project_name')
-    module_info_list = data.get('module_info_list')
+    update_info_list = data.get('update_info_list')
     '''
-    module_info_list: [{'origin_name1':'','new_name1':''},{'origin_name2':'','new_name2':''}]    
+    update_info_list: [{'origin_name1':'','new_name1':''},{'origin_name2':'','new_name2':''}]    
     '''
     if not project_name:
         return bad_request('must include project name')
@@ -89,20 +90,22 @@ def update_module():
     if project.owner_name != g.current_user.username:
         return bad_request('you are not the owner of project %s' % project_name)
 
-    if not module_info_list:
-        return bad_request('please input info')
+    if not update_info_list:
+        data = project.to_dict()['modules']
+        response = trueReturn(data, 'success')
+        return response
 
     new_name_list = []
-    for module_info in module_info_list:
+    for module_info in update_info_list:
         origin_name = module_info['origin_name']
         new_name = module_info['new_name']
         module = Module.query.filter_by(module_name=origin_name).first_or_404()
 
-        if not new_name:
-            continue
-
-        if new_name == '':
+        if not new_name or new_name == '':
             return bad_request('please input a new module name')
+
+        if new_name == origin_name:
+            continue
 
         if Module.query.filter_by(module_name=new_name).first() or new_name in new_name_list:
             return bad_request('please use a different module name')
