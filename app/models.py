@@ -215,6 +215,27 @@ class Env(db.Model):
     def __repr__(self):
         return '<Env {}>'.format(self.name)
 
+    def from_dict(self, data):
+        for field in ['env_name', 'env_version', 'env_host',
+                      'env_var', 'env_param', 'env_repeat']:
+            if field in data:
+                setattr(self, field, data[field])
+
+        self.project_id = Project.query.filter_by(project_name=data['project_name']).first().id
+
+    def to_dict(self):
+        data = {
+            'id': self.id,
+            'module_name': self.module_name,
+            'project_id': self.project_id,
+            'timestamp': self.timestamp,
+            'apis': {
+                'count': self.apis.count(),
+                'list': [api.api_name for api in self.apis.order_by(Api.timestamp.desc()).all()]
+            }
+        }
+        return data
+
 
 class Api(db.Model):
     id = db.Column(db.Integer, primary_key=True)
