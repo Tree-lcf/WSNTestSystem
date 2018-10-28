@@ -73,7 +73,10 @@ def operate_module():
 
     # 查
     if operate_type == '3':
-        data = project.to_dict()['modules']
+        data = {
+            'project_name': project_name,
+            'modules': project.to_dict()['modules']
+        }
         response = trueReturn(data, 'list success')
         return response
 
@@ -84,7 +87,7 @@ def operate_module():
         module = Module.query.filter_by(module_name=origin_name).first_or_404()
         db.session.delete(module)
         session_commit()
-
+        data = origin_name
         response = trueReturn(data, 'delete success')
         return response
 
