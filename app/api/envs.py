@@ -19,29 +19,26 @@ def operate_env():
     project_name = data.get('project_name')
     env_name = data.get('env_name')
     env_version = data.get('env_version')
-    origin_name = data.get('origin_name')
-    origin_version = data.get('origin_version')
+    env_id = data.get('env_id')
     operate_type = data.get('operate_type')
 
-    if not project_name or not operate_type:
-        return bad_request('must include project name or operate_type')
-
-    project = Project.query.filter_by(project_name=project_name).first_or_404()
-    if project.owner_name != g.current_user.username:
-        return bad_request('you are not the owner of project %s' % project_name)
+    if not operate_type:
+        return bad_request('must include operate_type')
 
     # 增
     if operate_type == '1':
+        if not project_name:
+            return bad_request('must include project name')
+        project = Project.query.filter_by(project_name=project_name).first_or_404()
+        if project not in g.current_user.followed_projects().all():
+            return bad_request('you are not the member of project %s' % project_name)
+
         if not env_name or not env_version:
-            return bad_request('must include environment name or operate_type')
-        env = Env.query.filter_by(env_name=env_name).first()
-        if env:
+            return bad_request('must include environment name or version')
+        if Env.query.filter_by(env_name=env_name, env_version=env_version).first():
+            print(Env.query.filter_by(env_name=env_name, env_version=env_version).first())
             return bad_request('there is environment %s in this project %s' % (env_name, project_name))
 
-        # data = {
-        #     'module_name': module_name,
-        #     'project_id': project.id
-        # }
         env = Env()
         env.from_dict(data)
         db.session.add(env)
@@ -53,14 +50,21 @@ def operate_env():
 
     # 改
     if operate_type == '2':
-        env = Env.query.filter_by(env_name=origin_name).first_or_404()
+        if project_name:
+            project = Project.query.filter_by(project_name=project_name).first_or_404()
+            if project not in g.current_user.followed_projects().all():
+                return bad_request('you are not the member of project %s' % project_name)
 
-        if 'env_name' and env_name != origin_name and \
-                Env.query.filter_by(env_name=env_name).first():
-            return bad_request('please use a different environment name')
-        if 'env_version' and env_version != origin_version and \
-                Env.query.filter_by(env_version=env_version).first():
-            return bad_request('please use a different environment version')
+        env = Env.query.get_or_404(env_id)
+        if Project.query.get(env.project_id) not in g.current_user.followed_projects().all():
+            return bad_request('you are not the member of project')
+
+        if (env_name or env_version) and (env_name != env.env_name or env_version != env.env_version) and \
+                Env.query.filter_by(env_name=env_name, env_version=env_version).first():
+            return bad_request('please use a different environment name or version')
+        # if env_version and env_version != env.env_version and \
+        #         Env.query.filter_by(env_name=env_name, env_version=env_version).first():
+        #     return bad_request('please use a different environment name or version')
 
         env.from_dict(data)
         db.session.add(env)
@@ -72,20 +76,31 @@ def operate_env():
 
     # 查
     if operate_type == '3':
-        data = {
-            'project_name': project_name,
-            'modules': project.to_dict()['modules']
-        }
-        response = trueReturn(data, 'list success')
+        '''
+        [{
+        'project_name': project_name,
+        'env_list':[{}]
+        }]
+        '''
+        page_num = int(data.get('page_num', 1))
+        per_page = int(data.get('per_page', 10))
+        payload = Env.to_collection_dict(page_num, per_page)
+        response = trueReturn(payload, 'list success')
         return response
 
     # 删
     if operate_type == '4':
-        if not origin_name:
-            return bad_request('please input environment name')
-        env = Env.query.filter_by(env_name=origin_name).first_or_404()
+        if not env_id:
+            return bad_request('please input env_id')
+        env = Env.query.get_or_404(env_id)
+
+        if Project.query.get(env.project_id) not in g.current_user.followed_projects().all():
+            return bad_request('you are not the member of project')
+
         db.session.delete(env)
         session_commit()
-        data = origin_name
+        data = {
+            'env_id': env_id
+        }
         response = trueReturn(data, 'delete success')
         return response

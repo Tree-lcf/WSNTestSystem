@@ -23,7 +23,7 @@ project_user = db.Table('project_user',
 class User(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     username = db.Column(db.String(255), index=True, unique=True)
-    email = db.Column(db.String(255), unique=True)
+    email = db.Column(db.String(255), index=True, unique=True)
     password_hash = db.Column(db.String(128))
     is_administrator = db.Column(db.Boolean, default=False)
     token = db.Column(db.String(32), index=True, unique=True)
@@ -56,7 +56,7 @@ class User(db.Model):
             'id': self.id,
             'username': self.username,
             'is_administrator': self.is_administrator,
-            'projects': self.projects.all()
+            'project_list': [project.project_name for project in self.followed_projects().all()]
         }
         return data
 
@@ -119,7 +119,7 @@ class Project(db.Model):
         backref=db.backref('projects', lazy='dynamic'), lazy='dynamic')
 
     def __repr__(self):
-        return '<Project {}>'.format(self.name)
+        return '<Project {}>'.format(self.project_name)
 
     def from_dict(self, data):
         for field in ['project_name', 'owner_name']:
@@ -137,7 +137,10 @@ class Project(db.Model):
                 'list': [module.module_name for module in self.modules.order_by(Module.timestamp.desc()).all()]
             },
             'scenes_count': self.scenes.count(),
-            'envs_count': self.envs.count(),
+            'envs': {
+                'count': self.envs.count(),
+                'list': [env.id for env in self.envs.order_by(Env.timestamp.desc()).all()]
+            },
             'users': {
                 'count': self.users.count(),
                 'list': [user.username for user in self.users.order_by(User.username).all()]
@@ -173,13 +176,13 @@ class Project(db.Model):
 
 class Module(db.Model):
     id = db.Column(db.Integer, primary_key=True)
-    module_name = db.Column(db.String(255), index=True, unique=True)
+    module_name = db.Column(db.String(255), index=True)
     timestamp = db.Column(db.DateTime, index=True, default=datetime.now)
     project_id = db.Column(db.Integer, db.ForeignKey('project.id'))
     apis = db.relationship('Api', backref='module', lazy='dynamic')
 
     def __repr__(self):
-        return '<Module {}>'.format(self.name)
+        return '<Module {}>'.format(self.module_name)
 
     def from_dict(self, data):
         for field in ['module_name', 'project_id']:
@@ -202,18 +205,18 @@ class Module(db.Model):
 
 class Env(db.Model):
     id = db.Column(db.Integer, primary_key=True)
-    env_name = db.Column(db.String(255), index=True, unique=True)
-    env_version = db.Column(db.String(255), index=True, unique=True)
+    env_name = db.Column(db.String(255), index=True)
+    env_version = db.Column(db.String(255), index=True)
     env_host = db.Column(db.String(255))
     env_var = db.Column(db.Text())
     env_param = db.Column(db.Text())
-    env_repeat = db.Column(db.Integer)
+    env_repeat = db.Column(db.Integer, default=1)
     timestamp = db.Column(db.DateTime, index=True, default=datetime.now)
     project_id = db.Column(db.Integer, db.ForeignKey('project.id'))
     tests = db.relationship('Test', backref='env', lazy='dynamic')
 
     def __repr__(self):
-        return '<Env {}>'.format(self.name)
+        return '<Env {}>'.format(self.env_name)
 
     def from_dict(self, data):
         for field in ['env_name', 'env_version', 'env_host',
@@ -221,17 +224,50 @@ class Env(db.Model):
             if field in data:
                 setattr(self, field, data[field])
 
-        self.project_id = Project.query.filter_by(project_name=data['project_name']).first().id
+        if data['project_name']:
+            self.project_id = Project.query.filter_by(project_name=data['project_name']).first().id
 
     def to_dict(self):
         data = {
             'id': self.id,
-            'module_name': self.module_name,
+            'env_name': self.env_name,
             'project_id': self.project_id,
+            'env_version': self.env_version,
+            'env_host': self.env_host,
+            'env_var': self.env_var,
+            'env_param': self.env_param,
+            'env_repeat': self.env_repeat,
             'timestamp': self.timestamp,
-            'apis': {
-                'count': self.apis.count(),
-                'list': [api.api_name for api in self.apis.order_by(Api.timestamp.desc()).all()]
+            'tests': {
+                'count': self.tests.count(),
+                'list': [test.test_name for test in self.tests.order_by(Test.timestamp.desc()).all()]
+            }
+        }
+        return data
+
+    @staticmethod
+    def to_collection_dict(page_num, per_page):
+        projects = g.current_user.followed_projects().paginate(page_num, per_page, False)
+        project_list = projects.items
+        payload = []
+        for project in project_list:
+            env_list = []
+            for env in project.envs.all():
+                env_data = env.to_dict()
+                env_list.append(env_data)
+            project_data = {
+                'project_name': project.project_name,
+                'env_list': env_list
+            }
+            payload.append(project_data)
+
+        data = {
+            'env_items': payload,
+            'meta': {
+                'has_next': projects.has_next,
+                'next_num': projects.next_num,
+                'has_prev': projects.has_prev,
+                'prev_num': projects.prev_num
             }
         }
         return data

@@ -2,7 +2,7 @@ from datetime import datetime, timedelta
 import unittest
 import requests
 from app import create_app, db
-from app.models import User, Project, Module
+from app.models import User, Project, Module, Env
 from config import Config
 from app.common import AttrDict
 
@@ -95,6 +95,55 @@ class TestRegLoginCase(unittest.TestCase):
             'origin_name': 'app_module_2',
             'operate_type': '4'
         }
+        self.envOperate_1 = {
+            'project_name': 'app',
+            'env_name': 'env_1',
+            'env_id': 1,
+            'env_version': '1',
+            'operate_type': '1',
+            'page_num': '1',
+            'per_page': '10',
+            'env_host': '127.0.0.1',
+            'env_var': 'uuid = 123',
+            'env_param': '[1, 2]',
+            'env_repeat': 1
+        }
+        self.envOperate_1_1 = {
+            'project_name': 'app',
+            'env_id': None,
+            'env_name': 'env_1',
+            'env_version': '2',
+            'operate_type': '1',
+            'page_num': None,
+            'per_page': None
+        }
+        self.envOperate_3 = {
+            'project_name': None,
+            'env_id': None,
+            'env_name': None,
+            'env_version': None,
+            'operate_type': '3',
+            'page_num': '1',
+            'per_page': '20'
+        }
+        self.envOperate_2 = {
+            'project_name': None,
+            'env_id': None,
+            'env_name': 'aa',
+            'env_version': '1',
+            'operate_type': '2',
+            'page_num': None,
+            'per_page': None
+        }
+        self.envOperate_4 = {
+            'project_name': None,
+            'env_id': None,
+            'env_name': None,
+            'env_version': None,
+            'operate_type': '4',
+            'page_num': None,
+            'per_page': None
+        }
         host = 'http://127.0.0.1:5000'
         self.register_url = host + '/auth/register'
         self.login_url = host + '/auth/login'
@@ -111,34 +160,52 @@ class TestRegLoginCase(unittest.TestCase):
         self.update_module_url = host + '/api/modulesUpdate'
         self.get_modules_url = host + '/api/moduleList'
         self.moduleOperate_url = host + '/api/moduleOperate'
+        self.envOperate_url = host + '/api/envOperate'
 
     def tearDown(self):
         db.session.remove()
-        user1 = User.query.filter_by(username='003').first()
-        user2 = User.query.filter_by(username='007').first()
-        project1 = Project.query.filter_by(project_name='app').first()
-        project2 = Project.query.filter_by(project_name='cpp').first()
-        module1 = Module.query.filter_by(module_name='app_module_1').first()
-        module2 = Module.query.filter_by(module_name='app_module_2').first()
-        module3 = Module.query.filter_by(module_name='aa').first()
-        module4 = Module.query.filter_by(module_name='bb').first()
-        # try:
-        if user1:
-            db.session.delete(user1)
-        if user2:
-            db.session.delete(user2)
-        if project1:
-            db.session.delete(project1)
-        if project2:
-            db.session.delete(project2)
-        if module1:
-            db.session.delete(module1)
-        if module2:
-            db.session.delete(module2)
-        if module3:
-            db.session.delete(module3)
-        if module4:
-            db.session.delete(module4)
+        users = User.query.all()
+        projects = Project.query.all()
+        modules = Module.query.all()
+        envs = Env.query.all()
+
+        for user in users:
+            db.session.delete(user)
+
+        for project in projects:
+            db.session.delete(project)
+
+        for module in modules:
+            db.session.delete(module)
+
+        for env in envs:
+            db.session.delete(env)
+
+        # user1 = User.query.filter_by(username='003').first()
+        # user2 = User.query.filter_by(username='007').first()
+        # project1 = Project.query.filter_by(project_name='app').first()
+        # project2 = Project.query.filter_by(project_name='cpp').first()
+        # module1 = Module.query.filter_by(module_name='app_module_1').first()
+        # module2 = Module.query.filter_by(module_name='app_module_2').first()
+        # module3 = Module.query.filter_by(module_name='aa').first()
+        # module4 = Module.query.filter_by(module_name='bb').first()
+        # # try:
+        # if user1:
+        #     db.session.delete(user1)
+        # if user2:
+        #     db.session.delete(user2)
+        # if project1:
+        #     db.session.delete(project1)
+        # if project2:
+        #     db.session.delete(project2)
+        # if module1:
+        #     db.session.delete(module1)
+        # if module2:
+        #     db.session.delete(module2)
+        # if module3:
+        #     db.session.delete(module3)
+        # if module4:
+        #     db.session.delete(module4)
 
         db.session.commit()
         # except Exception as error:
@@ -553,7 +620,7 @@ class TestRegLoginCase(unittest.TestCase):
         # print(response)
         # self.assertTrue(response.status)
 
-    def test_get_modules_success(self):
+    def test_operate_modules_success(self):
         requests.post(self.register_url, json=self.reg_data)
         response = requests.post(self.login_url, json=self.login_data).json()
         response = AttrDict(response)
@@ -582,6 +649,43 @@ class TestRegLoginCase(unittest.TestCase):
         self.assertTrue(response.status)
         response = requests.post(self.moduleOperate_url, cookies=cookies, json=self.moduleOperate_2).json()
         response = AttrDict(response)
+        print(response)
+        self.assertTrue(response.status)
+
+    def test_operate_envs_success(self):
+        requests.post(self.register_url, json=self.reg_data)
+        response = requests.post(self.login_url, json=self.login_data).json()
+        response = AttrDict(response)
+        cookies = {'token': response.data.token}
+        payload = {
+            'project_name': 'app',
+            'owner_name': '003'
+        }
+        requests.post(self.add_project_url, cookies=cookies, json=payload)
+        response = requests.post(self.envOperate_url, cookies=cookies, json=self.envOperate_1_1).json()
+        response = AttrDict(response)
+        print('----- add -----')
+        print(response)
+        self.assertTrue(response.status)
+        response = requests.post(self.envOperate_url, cookies=cookies, json=self.envOperate_1).json()
+        response = AttrDict(response)
+        print(response)
+        self.assertTrue(response.status)
+        self.envOperate_2['env_id'] = response.data.id
+        self.envOperate_4['env_id'] = response.data.id
+        response = requests.post(self.envOperate_url, cookies=cookies, json=self.envOperate_2).json()
+        response = AttrDict(response)
+        print('----- update -----')
+        print(response)
+        self.assertTrue(response.status)
+        response = requests.post(self.envOperate_url, cookies=cookies, json=self.envOperate_3).json()
+        response = AttrDict(response)
+        print('----- list -----')
+        print(response)
+        self.assertTrue(response.status)
+        response = requests.post(self.envOperate_url, cookies=cookies, json=self.envOperate_4).json()
+        response = AttrDict(response)
+        print('----- del -----')
         print(response)
         self.assertTrue(response.status)
 
