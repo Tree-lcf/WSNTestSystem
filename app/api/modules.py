@@ -85,6 +85,8 @@ def operate_module():
         if not origin_name:
             return bad_request('please input module name')
         module = Module.query.filter_by(module_name=origin_name).first_or_404()
+        if module.apis.all():
+            return bad_request('there are Apis under this module, please delete those Apis first')
         db.session.delete(module)
         session_commit()
         data = origin_name

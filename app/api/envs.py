@@ -36,7 +36,6 @@ def operate_env():
         if not env_name or not env_version:
             return bad_request('must include environment name or version')
         if Env.query.filter_by(env_name=env_name, env_version=env_version).first():
-            print(Env.query.filter_by(env_name=env_name, env_version=env_version).first())
             return bad_request('there is environment %s in this project %s' % (env_name, project_name))
 
         env = Env()
@@ -96,6 +95,9 @@ def operate_env():
 
         if Project.query.get(env.project_id) not in g.current_user.followed_projects().all():
             return bad_request('you are not the member of project')
+
+        if env.tests.all():
+            return bad_request('there are tests under this env, please delete those tests first')
 
         db.session.delete(env)
         session_commit()

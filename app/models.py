@@ -53,7 +53,7 @@ class User(db.Model):
 
     def to_dict(self):
         data = {
-            'id': self.id,
+            'user_id': self.id,
             'username': self.username,
             'is_administrator': self.is_administrator,
             'project_list': [project.project_name for project in self.followed_projects().all()]
@@ -113,6 +113,7 @@ class Project(db.Model):
     timestamp = db.Column(db.DateTime, index=True, default=datetime.now)
     modules = db.relationship('Module', backref='project', lazy='dynamic')
     envs = db.relationship('Env', backref='project', lazy='dynamic')
+    apis = db.relationship('Api', backref='project', lazy='dynamic')
     scenes = db.relationship('Scene', backref='project', lazy='dynamic')
     users = db.relationship(
         'User', secondary=project_user,
@@ -128,7 +129,7 @@ class Project(db.Model):
 
     def to_dict(self):
         data = {
-            'id': self.id,
+            'project_id': self.id,
             'project_name': self.project_name,
             'project_owner': self.owner_name,
             'timestamp': self.timestamp,
@@ -191,7 +192,7 @@ class Module(db.Model):
 
     def to_dict(self):
         data = {
-            'id': self.id,
+            'module_id': self.id,
             'module_name': self.module_name,
             'project_id': self.project_id,
             'timestamp': self.timestamp,
@@ -229,7 +230,7 @@ class Env(db.Model):
 
     def to_dict(self):
         data = {
-            'id': self.id,
+            'env_id': self.id,
             'env_name': self.env_name,
             'project_id': self.project_id,
             'env_version': self.env_version,
@@ -277,6 +278,7 @@ class Api(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     api_name = db.Column(db.String(255))
     req_method = db.Column(db.String(255))
+    req_temp_host = db.Column(db.String(255))
     req_relat_url = db.Column(db.String(255))
     req_headers = db.Column(db.String(255))
     req_params = db.Column(db.Text())
@@ -284,10 +286,78 @@ class Api(db.Model):
     req_body = db.Column(db.Text())
     timestamp = db.Column(db.DateTime, index=True, default=datetime.now)
     module_id = db.Column(db.Integer, db.ForeignKey('module.id'))
+    project_id = db.Column(db.Integer, db.ForeignKey('project.id'))
     tests = db.relationship('Test', backref='api', lazy='dynamic')
 
     def __repr__(self):
         return '<Api {}>'.format(self.name)
+
+    def from_dict(self, data):
+        for field in ['api_name', 'req_method', 'req_temp_host', 'req_relat_url',
+                      'req_headers', 'req_params', 'req_data_type', 'req_body']:
+            if field in data:
+                setattr(self, field, data[field])
+
+        if data['module_id']:
+            self.module_id = data['module_id']
+
+        if data['project_id']:
+            self.project_id = data['project_id']
+
+    def to_dict(self):
+        data = {
+            'api_id': self.id,
+            'api_name': self.api_name,
+            'project_id': self.project_id,
+            'module_id': self.module_id,
+            'req_method': self.req_method,
+            'req_temp_host': self.req_temp_host,
+            'req_relat_url': self.req_relat_url,
+            'req_headers': self.req_headers,
+            'req_params': self.req_params,
+            'req_data_type': self.req_data_type,
+            'req_body': self.req_body,
+            'timestamp': self.timestamp,
+            'tests': {
+                'count': self.tests.count(),
+                'list': [test.test_name for test in self.tests.order_by(Test.timestamp.desc()).all()]
+            }
+        }
+        return data
+
+    @staticmethod
+    def to_collection_dict(page_num, per_page):
+        projects = g.current_user.followed_projects().paginate(page_num, per_page, False)
+        project_list = projects.items
+        payload = []
+        for project in project_list:
+            module_list = []
+            for module in project.modules.all():
+                api_list = []
+                for api in module.apis.all():
+                    api_data = api.to_dict()
+                    api_list.append(api_data)
+                module_data = {
+                    'module_id': module.id,
+                    'api_list': api_list
+                }
+                module_list.append(module_data)
+            project_data = {
+                'project_id': project.id,
+                'module_list': module_list
+            }
+            payload.append(project_data)
+
+        data = {
+            'Api_items': payload,
+            'meta': {
+                'has_next': projects.has_next,
+                'next_num': projects.next_num,
+                'has_prev': projects.has_prev,
+                'prev_num': projects.prev_num
+            }
+        }
+        return data
 
 
 class Test(db.Model):

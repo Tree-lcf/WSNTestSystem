@@ -144,6 +144,39 @@ class TestRegLoginCase(unittest.TestCase):
             'page_num': None,
             'per_page': None
         }
+        self.apiOperate_1 = {
+            'project_id': 1,
+            'module_id': 1,
+            'api_name': 'api_1',
+            'api_id': 1,
+            'req_method': 'req_method',
+            'req_temp_host': 'req_temp_host',
+            'req_relat_url': 'req_relat_url',
+            'req_headers': 'req_headers',
+            'req_params': 'req_params',
+            'req_data_type': 'req_data_type',
+            'req_body': 'req_body',
+            'operate_type': '1',
+            'page_num': 1,
+            'per_page': 20
+        }
+        self.apiOperate_2 = {
+            'project_id': 1,
+            'module_id': 1,
+            'api_name': 'api_2',
+            'api_id': 1,
+            'req_method': '2',
+            'req_temp_host': '2',
+            'req_relat_url': '2',
+            'req_headers': '2',
+            'req_params': '2',
+            'req_data_type': '2',
+            'req_body': '2',
+            'operate_type': '2',
+            'page_num': None,
+            'per_page': None
+        }
+
         host = 'http://127.0.0.1:5000'
         self.register_url = host + '/auth/register'
         self.login_url = host + '/auth/login'
@@ -161,6 +194,7 @@ class TestRegLoginCase(unittest.TestCase):
         self.get_modules_url = host + '/api/moduleList'
         self.moduleOperate_url = host + '/api/moduleOperate'
         self.envOperate_url = host + '/api/envOperate'
+        self.apiOperate_url = host + '/api/apiOperate'
 
     def tearDown(self):
         db.session.remove()
@@ -616,10 +650,6 @@ class TestRegLoginCase(unittest.TestCase):
         response = requests.post(self.update_module_url, cookies=cookies, json=self.module_info).json()
         print(response)
 
-        # response = AttrDict(response)
-        # print(response)
-        # self.assertTrue(response.status)
-
     def test_operate_modules_success(self):
         requests.post(self.register_url, json=self.reg_data)
         response = requests.post(self.login_url, json=self.login_data).json()
@@ -671,8 +701,8 @@ class TestRegLoginCase(unittest.TestCase):
         response = AttrDict(response)
         print(response)
         self.assertTrue(response.status)
-        self.envOperate_2['env_id'] = response.data.id
-        self.envOperate_4['env_id'] = response.data.id
+        self.envOperate_2['env_id'] = response.data.env_id
+        self.envOperate_4['env_id'] = response.data.env_id
         response = requests.post(self.envOperate_url, cookies=cookies, json=self.envOperate_2).json()
         response = AttrDict(response)
         print('----- update -----')
@@ -684,6 +714,54 @@ class TestRegLoginCase(unittest.TestCase):
         print(response)
         self.assertTrue(response.status)
         response = requests.post(self.envOperate_url, cookies=cookies, json=self.envOperate_4).json()
+        response = AttrDict(response)
+        print('----- del -----')
+        print(response)
+        self.assertTrue(response.status)
+
+    def test_operate_api_success(self):
+        requests.post(self.register_url, json=self.reg_data)
+        response = requests.post(self.login_url, json=self.login_data).json()
+        response = AttrDict(response)
+        cookies = {'token': response.data.token}
+        payload = {
+            'project_name': 'app',
+            'owner_name': '003'
+        }
+        response = requests.post(self.add_project_url, cookies=cookies, json=payload).json()
+        response = AttrDict(response)
+        project_id = response.data.project_id
+        response = requests.post(self.moduleOperate_url, cookies=cookies, json=self.moduleOperate_1).json()
+        response = AttrDict(response)
+        module_id = response.data.module_id
+
+        self.apiOperate_1['project_id'] = project_id
+        self.apiOperate_1['module_id'] = module_id
+        response = requests.post(self.apiOperate_url, cookies=cookies, json=self.apiOperate_1).json()
+        response = AttrDict(response)
+        print('----- add -----')
+        print(response)
+        self.assertTrue(response.status)
+
+        api_id = response.data.api_id
+        self.apiOperate_2['project_id'] = project_id
+        self.apiOperate_2['module_id'] = module_id
+        self.apiOperate_2['api_id'] = api_id
+        response = requests.post(self.apiOperate_url, cookies=cookies, json=self.apiOperate_2).json()
+        response = AttrDict(response)
+        print('----- update -----')
+        print(response)
+        self.assertTrue(response.status)
+
+        self.apiOperate_1['operate_type'] = '3'
+        response = requests.post(self.apiOperate_url, cookies=cookies, json=self.apiOperate_1).json()
+        response = AttrDict(response)
+        print('----- list -----')
+        print(response)
+        self.assertTrue(response.status)
+
+        self.apiOperate_2['operate_type'] = '4'
+        response = requests.post(self.apiOperate_url, cookies=cookies, json=self.apiOperate_2).json()
         response = AttrDict(response)
         print('----- del -----')
         print(response)
