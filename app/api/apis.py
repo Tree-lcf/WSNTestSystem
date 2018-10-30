@@ -135,3 +135,86 @@ def operate_api():
         }
         response = trueReturn(data, 'delete success')
         return response
+
+    # # Run
+    # if operate_type == '5':
+    #
+    #     name = data.get('api_name')
+    #     method = data.get('req_method')
+    #     url = data.get('req_temp_host') + data.get('req_relat_url')
+    #     method = data.get('req_method')
+    #     method = data.get('req_method')
+    #     method = data.get('req_method')
+    #     method = data.get('req_method')
+    #     method = data.get('req_method')
+    #     method = data.get('req_method')
+    #     'req_temp_host': 'req_temp_host',
+    #     'req_relat_url': 'req_relat_url',
+    #     'req_headers': 'req_headers',
+    #     'req_params': 'req_params',
+    #     'req_data_type': 'req_data_type',
+    #     'req_body': 'req_body',
+    #     'operate_type': '1',
+    #     'page_num': 1,
+    #     'per_page': 20
+    #
+    #     testcases = [{
+    #         'config': {},
+    #         'teststeps': [
+    #             {
+    #                 'name': '',
+    #                 'request': {
+    #                     'url': 'http://127.0.0.1:5000/api/get-token',
+    #                     'method': 'POST',
+    #                     'headers': {'Content-Type': 'application/json', 'app_version': '2.8.6',
+    #                                 'device_sn': 'FwgRiO7CNA50DSU', 'os_platform': 'ios', 'user_agent': 'iOS/10.3'},
+    #                     'json': {'sign': '958a05393efef0ac7c0fb80a7eac45e24fd40c27'}
+    #                 },
+    #                 'extract': [
+    #                     {'token': 'content.token'}
+    #                 ],
+    #                 'validate': [
+    #                     {'eq': ['status_code', 200]},
+    #                     {'eq': ['headers.Content-Type', 'application/json']},
+    #                     {'eq': ['content.success', True]}
+    #                 ]
+    #             },
+    #             {
+    #                 'name': '/api/users/1000',
+    #                 'request': {
+    #                     'url': 'http://127.0.0.1:5000/api/users/1000',
+    #                     'method': 'POST',
+    #                     'headers': {'Content-Type': 'application/json', 'device_sn': 'FwgRiO7CNA50DSU',
+    #                                 'token': '$token'}, 'json': {'name': 'user1', 'password': '123456'}
+    #                 },
+    #                 'validate': [
+    #                     {'eq': ['status_code', 201]},
+    #                     {'eq': ['headers.Content-Type', 'application/json']},
+    #                     {'eq': ['content.success', True]},
+    #                     {'eq': ['content.msg', 'user created successfully.']}
+    #                 ]
+    #             }
+    #         ]
+    #     }]
+    #
+    #     case_data_id = []
+    #     if not case_data and not suite_data:
+    #         return jsonify({'msg': '请勾选信息后，再进行测试', 'status': 0})
+    #     # 前端传入的数据不是按照编号来的，所以这里重新排序
+    #     if case_data:
+    #         case_data_id = [(item['num'], item['caseId']) for item in case_data]
+    #         case_data_id.sort(key=lambda x: x[0])
+    #
+    #         api_msg = [ApiMsg.query.filter_by(id=c[1]).first() for c in case_data_id]
+    #     if suite_data:
+    #         for suite in suite_data:
+    #             case_data_id += json.loads(ApiSuite.query.filter_by(id=suite['id']).first().api_ids)
+    #             print(case_data_id)
+    #             api_msg = [ApiMsg.query.filter_by(id=c).first() for c in case_data_id]
+    #
+    #     d = RunCase(project_names=project_name, case_data=api_msg, config_id=config_id)
+    #     res = json.loads(d.run_case())
+    #     return jsonify({'msg': '测试完成', 'data': res, 'status': 1})
+    #
+    #     response = trueReturn(data, 'delete success')
+    #     return response

@@ -279,7 +279,7 @@ class Api(db.Model):
     api_name = db.Column(db.String(255))
     req_method = db.Column(db.String(255))
     req_temp_host = db.Column(db.String(255))
-    req_relat_url = db.Column(db.String(255))
+    req_relate_url = db.Column(db.String(255))
     req_headers = db.Column(db.String(255))
     req_params = db.Column(db.Text())
     req_data_type = db.Column(db.String(255))
@@ -293,7 +293,7 @@ class Api(db.Model):
         return '<Api {}>'.format(self.name)
 
     def from_dict(self, data):
-        for field in ['api_name', 'req_method', 'req_temp_host', 'req_relat_url',
+        for field in ['api_name', 'req_method', 'req_temp_host', 'req_relate_url',
                       'req_headers', 'req_params', 'req_data_type', 'req_body']:
             if field in data:
                 setattr(self, field, data[field])
@@ -312,7 +312,7 @@ class Api(db.Model):
             'module_id': self.module_id,
             'req_method': self.req_method,
             'req_temp_host': self.req_temp_host,
-            'req_relat_url': self.req_relat_url,
+            'req_relate_url': self.req_relate_url,
             'req_headers': self.req_headers,
             'req_params': self.req_params,
             'req_data_type': self.req_data_type,

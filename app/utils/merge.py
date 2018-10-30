@@ -1,51 +1,8 @@
-from app import db
-from flask import request
-import copy
+# encoding: utf-8
 import importlib
 import json
 import re
 import types
-
-
-def session_commit():
-    try:
-        db.session.commit()
-    except Exception as e:
-        db.session.rollback()
-        reason = str(e)
-        return reason
-
-
-class AttrDict(dict):
-    """
-    A class to convert a nested Dictionary into an object with key-values
-    that are accessible using attribute notation (AttrDict.attribute) instead of
-    key notation (Dict["key"]). This class recursively sets Dicts to objects,
-    allowing you to recurse down nested dicts (like: AttrDict.attr.attr)
-    """
-
-    # Inspired by:
-    # http://stackoverflow.com/a/14620633/1551810
-    # http://databio.org/posts/python_AttributeDict.html
-
-    def __init__(self, iterable, **kwargs):
-        super(AttrDict, self).__init__(iterable, **kwargs)
-        for key, value in iterable.items():
-            if isinstance(value, dict):
-                self.__dict__[key] = AttrDict(value)
-            else:
-                self.__dict__[key] = value
-
-
-def check_repeat(origin_list):
-    _list = origin_list.copy()
-    new_list = list(set(_list))
-
-    for a in new_list:
-        if a in _list:
-            _list.remove(a)
-
-    return _list
 
 
 def auto_num(num, model, **kwargs):
@@ -196,3 +153,8 @@ def merge_config(pro_config, scene_config):
                                          if v['key']]
     # pro_config['config']['output'] = ['token']
     return pro_config
+
+
+if __name__ == '__main__':
+    a = '${func($test)},$open,'
+    print(extract_variables(a))
