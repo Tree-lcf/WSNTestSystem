@@ -146,14 +146,39 @@ def operate_api():
         if data.get('req_data_type') == 'jason':
             json = data.get('req_method')
 
-
-
         'req_params': 'req_params',
         'req_data_type': 'req_data_type',
         'req_body': 'req_body',
         'operate_type': '1',
         'page_num': 1,
         'per_page': 20
+
+        case_data_id = []
+        if not case_data and not suite_data:
+            return jsonify({'msg': '请勾选信息后，再进行测试', 'status': 0})
+        # 前端传入的数据不是按照编号来的，所以这里重新排序
+        if case_data:
+            case_data_id = [(item['num'], item['caseId']) for item in case_data]
+            case_data_id.sort(key=lambda x: x[0])
+
+            api_msg = [ApiMsg.query.filter_by(id=c[1]).first() for c in case_data_id]
+        if suite_data:
+            for suite in suite_data:
+                case_data_id += json.loads(ApiSuite.query.filter_by(id=suite['id']).first().api_ids)
+                print(case_data_id)
+                api_msg = [ApiMsg.query.filter_by(id=c).first() for c in case_data_id]
+
+        d = RunCase(project_names=project_name, case_data=api_msg, config_id=config_id)
+        res = json.loads(d.run_case())
+        return jsonify({'msg': '测试完成', 'data': res, 'status': 1})
+
+        response = trueReturn(data, 'delete success')
+        return response
+
+
+
+
+
 
         testcases = [{
             'config': {},
@@ -195,24 +220,3 @@ def operate_api():
             ]
         }]
 
-        case_data_id = []
-        if not case_data and not suite_data:
-            return jsonify({'msg': '请勾选信息后，再进行测试', 'status': 0})
-        # 前端传入的数据不是按照编号来的，所以这里重新排序
-        if case_data:
-            case_data_id = [(item['num'], item['caseId']) for item in case_data]
-            case_data_id.sort(key=lambda x: x[0])
-
-            api_msg = [ApiMsg.query.filter_by(id=c[1]).first() for c in case_data_id]
-        if suite_data:
-            for suite in suite_data:
-                case_data_id += json.loads(ApiSuite.query.filter_by(id=suite['id']).first().api_ids)
-                print(case_data_id)
-                api_msg = [ApiMsg.query.filter_by(id=c).first() for c in case_data_id]
-
-        d = RunCase(project_names=project_name, case_data=api_msg, config_id=config_id)
-        res = json.loads(d.run_case())
-        return jsonify({'msg': '测试完成', 'data': res, 'status': 1})
-
-        response = trueReturn(data, 'delete success')
-        return response

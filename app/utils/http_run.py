@@ -14,15 +14,10 @@ def main_ate(tests):
     return summary
 
 
-class DataExtract(object):
-    def __init__(self, testset_id=None, test_id=None, api_hot_data=None):
-        self.test_id = test_id
-        self.testset_id = testset_id
-        self.env_id = env_id
-        self.api_hot_data = api_hot_data
-        self.make_report = True
-        self.new_report_id = None
-        self.temp_extract = list()
+class DataExtract:
+    def __init__(self, data, make_report=False):
+        self.data = data
+        self.make_report = make_report
 
     def project_case(self):
         if self.project_names and not self.scene_ids and not self.case_data:
@@ -52,31 +47,19 @@ class DataExtract(object):
         pro_cfg_data['config']['variables'] = json.loads(project_data.variables)
         return pro_cfg_data
 
-    def get_case(self, case_data, pro_base_url):
-        if self.run_type:
-            # 为true，获取api基础信息；case只包含可改变部分所以还需要api基础信息组合成全新的用例
-            api_case = ApiMsg.query.filter_by(id=case_data.apiMsg_id).first()
-        else:
-            # 为false，基础信息和参数信息都在api里面，所以api_case = case_data，直接赋值覆盖
-            api_case = case_data
+    def extract_data(self):
 
-        temp_case_data = {'name': case_data.name,
-                          'request': {'method': api_case.method,
-                                      'files': {},
+
+        temp_case_data = {'name': self.data.name,
+                          'request': {'method': self.data.method,
                                       'data': {}}}
-        if case_data.up_func:
-            temp_case_data['setup_hooks'] = [case_data.up_func]
-        if case_data.down_func:
-            temp_case_data['teardown_hooks'] = [case_data.down_func]
-        if json.loads(api_case.headers):
-            temp_case_data['request']['headers'] = {h['key']: h['value'] for h in json.loads(api_case.headers)
+
+        if json.loads(self.data.headers):
+            temp_case_data['request']['headers'] = {h['key']: h['value'] for h in json.loads(self.data.headers)
                                                     if h['key']}
 
-        if api_case.status_url != '-1':
-            temp_case_data['request']['url'] = pro_base_url['{}'.format(api_case.project_id)][
-                                                   api_case.status_url] + api_case.url.split('?')[0]
-        else:
-            temp_case_data['request']['url'] = api_case.url
+
+        temp_case_data['request']['url'] = data.get('req_temp_host') + '/' + data.get('req_relat_url')
 
         if api_case.func_address:
             temp_case_data['import_module_functions'] = [
