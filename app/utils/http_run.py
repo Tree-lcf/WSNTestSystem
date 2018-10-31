@@ -1,9 +1,11 @@
 import copy
 import json
+import datetime
 
 from app.models import *
 from httprunner import HttpRunner
 from app.common import merge_config
+from app.errors import bad_request
 
 
 def main_ate(tests):
@@ -12,17 +14,13 @@ def main_ate(tests):
     return summary
 
 
-class RunCase(object):
-    def __init__(self, project_name=None, scene_ids=None, case_data=None, config_id=None):
-        self.project_name = project_name
-        self.scene_ids = scene_ids
-        self.config_id = config_id
-        self.case_data = case_data
-        self.project_data = Project.query.filter_by(name=self.project_name).first()
-        self.project = self.project_data.id
-        self.run_type = False  # 判断是接口调试(false)or业务用例执行(true)
+class DataExtract(object):
+    def __init__(self, testset_id=None, test_id=None, api_hot_data=None):
+        self.test_id = test_id
+        self.testset_id = testset_id
+        self.env_id = env_id
+        self.api_hot_data = api_hot_data
         self.make_report = True
-        self.temp_data = self.scene_ids or self.case_data
         self.new_report_id = None
         self.temp_extract = list()
 
@@ -37,21 +35,6 @@ class RunCase(object):
             return all_case_data
         else:
             return None
-
-    # def scene_case(self):
-    #     if self.scene_ids:
-    #         scene_id = [Scene.query.filter_by(name=n, project_id=self.project_id).first().id for n in self.scene_ids]
-    #         self.run_type = True
-    #         return scene_id
-    #     else:
-    #         return None
-    #
-    # def one_case(self):
-    #     if self.project_names and not self.scene_ids and self.case_data:
-    #         self.run_type = False
-    #         return self.case_data
-    #     else:
-    #         return None
 
     @staticmethod
     def pro_config(project_data):
@@ -209,9 +192,19 @@ class RunCase(object):
     def run_case(self):
         now_time = datetime.datetime.now()
 
+        if self.api_hot_data:
+
+
+        # if self.test_id and not self.testset_id:
+        #     test = Test.query.get_or_404(self.test_id)
+        # elif not self.test_id and self.testset_id:
+        #     testset = Testset.query.get_or_404(self.testset_id)
+        # else:
+        #     return bad_request('something wrong on test_id or testset_id')
+
         if self.run_type and self.make_report:
 
-            new_report = Report(name=','.join([Scene.query.filter_by(id=scene_id).first().name for scene_id in self.scene_ids]),
+            new_report = Report(name=,
                                 data='{}.txt'.format(now_time.strftime('%Y/%m/%d %H:%M:%S')),
                                 belong_pro=self.project_names, read_status='待阅')
             db.session.add(new_report)
