@@ -1,6 +1,7 @@
 from datetime import datetime, timedelta
 import unittest
 import requests
+import json
 from app import create_app, db
 from app.models import User, Project, Module, Env
 from config import Config
@@ -147,7 +148,7 @@ class TestRegLoginCase(unittest.TestCase):
         self.apiOperate_1 = {
             'project_id': 1,
             'module_id': 1,
-            'api_name': 'api_1',
+            'name': 'api_1',
             'api_id': 1,
             'req_method': 'req_method',
             'req_temp_host': 'req_temp_host',
@@ -163,7 +164,7 @@ class TestRegLoginCase(unittest.TestCase):
         self.apiOperate_2 = {
             'project_id': 1,
             'module_id': 1,
-            'api_name': 'api_2',
+            'name': 'api_2',
             'api_id': 1,
             'req_method': '2',
             'req_temp_host': '2',
@@ -173,6 +174,24 @@ class TestRegLoginCase(unittest.TestCase):
             'req_data_type': '2',
             'req_body': '2',
             'operate_type': '2',
+            'page_num': None,
+            'per_page': None
+        }
+        self.apiOperate_5 = {
+            'project_id': 1,
+            'module_id': 1,
+            'name': 'api_2',
+            'api_id': 1,
+            'req_method': 'POST',
+            'req_temp_host': 'http://61.160.64.130:8081',
+            'req_relate_url': 'msg/getVersionInfo',
+            'req_headers': '{"Content-Type": "application/json"}',
+            'req_params': '',
+            'req_data_type': 'json',
+            'req_body': '{"type": "ios"}',
+            'extractors': '',
+            'validators': '',
+            'operate_type': '5',
             'page_num': None,
             'per_page': None
         }
@@ -764,6 +783,12 @@ class TestRegLoginCase(unittest.TestCase):
         response = requests.post(self.apiOperate_url, cookies=cookies, json=self.apiOperate_2).json()
         response = AttrDict(response)
         print('----- del -----')
+        print(response)
+        self.assertTrue(response.status)
+
+        response = requests.post(self.apiOperate_url, cookies=cookies, json=self.apiOperate_5).json()
+        response = AttrDict(response)
+        print('----- Run -----')
         print(response)
         self.assertTrue(response.status)
 

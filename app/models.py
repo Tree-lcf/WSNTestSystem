@@ -276,7 +276,7 @@ class Env(db.Model):
 
 class Api(db.Model):
     id = db.Column(db.Integer, primary_key=True)
-    api_name = db.Column(db.String(255))
+    name = db.Column(db.String(255))
     req_method = db.Column(db.String(255))
     req_temp_host = db.Column(db.String(255))
     req_relate_url = db.Column(db.String(255))
@@ -293,7 +293,7 @@ class Api(db.Model):
         return '<Api {}>'.format(self.name)
 
     def from_dict(self, data):
-        for field in ['api_name', 'req_method', 'req_temp_host', 'req_relate_url',
+        for field in ['name', 'req_method', 'req_temp_host', 'req_relate_url',
                       'req_headers', 'req_params', 'req_data_type', 'req_body']:
             if field in data:
                 setattr(self, field, data[field])
@@ -307,7 +307,7 @@ class Api(db.Model):
     def to_dict(self):
         data = {
             'api_id': self.id,
-            'api_name': self.api_name,
+            'name': self.name,
             'project_id': self.project_id,
             'module_id': self.module_id,
             'req_method': self.req_method,

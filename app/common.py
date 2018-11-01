@@ -48,6 +48,46 @@ def check_repeat(origin_list):
     return _list
 
 
+def extract_data(test_data):
+    test_data = AttrDict(test_data)
+    payload = {
+        'name': test_data.name,
+        'request': {
+            'method': test_data['req_method']
+        }
+    }
+
+    if test_data.req_headers:
+        payload['request']['headers'] = json.loads(test_data.req_headers)
+
+        payload['request']['url'] = test_data.get('req_temp_host') + '/' + test_data.get('req_relate_url')
+
+        payload['request']['params'] = {param['key']: param['value'] for param in test_data.req_params if
+                                      param.get('key')}
+
+    if test_data.get('req_data_type') == 'data':
+        payload['request']['data'] = {variable['key']: variable['value'] for variable in test_data.req_body if
+                                        variable.get('key')}
+
+    if test_data.get('req_data_type') == 'json':
+        payload['request']['json'] = json.loads(test_data.req_body)
+
+    payload['extract'] = [{extract['key']: extract['value']} for extract in test_data.extractors if
+                        extract.get('key')]
+
+    payload['validate'] = [{validate['comparator']: [validate['key'], validate['value']]} for validate in
+                             test_data.validators if validate.get('key')]
+
+    return payload
+
+
+class MyEncoder(json.JSONEncoder):
+    def default(self, obj):
+        if isinstance(obj, bytes):
+            return str(obj, encoding='utf-8')
+        return json.JSONEncoder.default(self, obj)
+
+
 def auto_num(num, model, **kwargs):
     """
     自动返回编号的最大值
