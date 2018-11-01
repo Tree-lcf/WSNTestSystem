@@ -88,6 +88,25 @@ class MyEncoder(json.JSONEncoder):
         return json.JSONEncoder.default(self, obj)
 
 
+def report_minify(report):
+    report = report
+    report.pop('platform')
+    report['details'][0].pop('time')
+    report['details'][0].pop('base_url')
+    report['details'][0].pop('in_out')
+    report['details'][0].pop('stat')
+    report['details'][0]['records'][0].pop('attachment')
+    report['details'][0]['records'][0]['meta_data']['response'].pop('reason')
+    report['details'][0]['records'][0]['meta_data']['response'].pop('text')
+    report['details'][0]['records'][0]['meta_data']['response'].pop('url')
+    report['details'][0]['records'][0]['meta_data']['response'].pop('content')
+    report['details'][0]['records'][0]['meta_data']['response'].pop('content_size')
+    report['details'][0]['records'][0]['meta_data']['response'].pop('encoding')
+    report['details'][0]['records'][0]['meta_data']['response'].pop('response_time_ms')
+
+    return report
+
+
 def auto_num(num, model, **kwargs):
     """
     自动返回编号的最大值

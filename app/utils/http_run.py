@@ -4,7 +4,7 @@ import datetime
 
 from app.models import *
 from httprunner import HttpRunner
-from app.common import merge_config, AttrDict, extract_data, MyEncoder
+from app.common import merge_config, AttrDict, extract_data, MyEncoder, report_minify
 from app.errors import bad_request
 
 
@@ -54,6 +54,7 @@ class Runner:
         #     db.session.commit()
         payload = self.load_data()
         response = main_ate(payload)
+        response = report_minify(response)
         response = json.dumps(response, cls=MyEncoder, indent=4)
 
         # res['time']['duration'] = "%.2f" % res['time']['duration']
