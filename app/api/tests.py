@@ -18,28 +18,13 @@ def before_request():
 @bp.route('/testOperate', methods=['POST'])
 def operate_test():
     '''
-    scene_id
-    scene_name
-    scene_desc
-    scene_name
-    scene_ver
-    req_method
-    req_temp_host
-    req_relat_url
-    req_headers
-    req_params
-    req_data_type
-    req_body
-    timestamp
     module_id
     project_id
     operate_type : '1' = 增， '2' = 改， '3' = 查， '4' = 删, '5' = Run
     '''
     data = request.get_json() or {}
-    module_id = data.get('module_id')
     project_id = data.get('project_id')
-    api_name = data.get('name')
-    # env_version = data.get('env_version')
+    module_id = data.get('module_id')
     api_id = data.get('api_id')
     operate_type = data.get('operate_type')
 
