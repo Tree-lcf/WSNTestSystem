@@ -18,7 +18,6 @@ def operate_env():
     data = request.get_json() or {}
     project_name = data.get('project_name')
     env_name = data.get('env_name')
-    env_version = data.get('env_version')
     env_id = data.get('env_id')
     operate_type = data.get('operate_type')
 
@@ -33,9 +32,9 @@ def operate_env():
         if project not in g.current_user.followed_projects().all():
             return bad_request('you are not the member of project %s' % project_name)
 
-        if not env_name or not env_version:
-            return bad_request('must include environment name or version')
-        if Env.query.filter_by(env_name=env_name, env_version=env_version).first():
+        if not env_name:
+            return bad_request('must include environment name')
+        if Env.query.filter_by(env_name=env_name).first():
             return bad_request('there is environment %s in this project %s' % (env_name, project_name))
 
         env = Env()
@@ -58,8 +57,8 @@ def operate_env():
         if Project.query.get(env.project_id) not in g.current_user.followed_projects().all():
             return bad_request('you are not the member of project')
 
-        if (env_name or env_version) and (env_name != env.env_name or env_version != env.env_version) and \
-                Env.query.filter_by(env_name=env_name, env_version=env_version).first():
+        if env_name and env_name != env.env_name and \
+                Env.query.filter_by(env_name=env_name).first():
             return bad_request('please use a different environment name or version')
         # if env_version and env_version != env.env_version and \
         #         Env.query.filter_by(env_name=env_name, env_version=env_version).first():

@@ -135,9 +135,6 @@ def delete_project():
     if project.envs.first():
         return bad_request('Cannot delete it as there are envs in %s' % project_name)
 
-    if project.scenes.first():
-        return bad_request('Cannot delete it as there are scenes in %s' % project_name)
-
     db.session.delete(project)
     session_commit()
 

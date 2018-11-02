@@ -114,7 +114,7 @@ class Project(db.Model):
     modules = db.relationship('Module', backref='project', lazy='dynamic')
     envs = db.relationship('Env', backref='project', lazy='dynamic')
     apis = db.relationship('Api', backref='project', lazy='dynamic')
-    scenes = db.relationship('Scene', backref='project', lazy='dynamic')
+    tests = db.relationship('Test', backref='project', lazy='dynamic')
     users = db.relationship(
         'User', secondary=project_user,
         backref=db.backref('projects', lazy='dynamic'), lazy='dynamic')
@@ -137,7 +137,7 @@ class Project(db.Model):
                 'count': self.modules.count(),
                 'list': [module.module_name for module in self.modules.order_by(Module.timestamp.desc()).all()]
             },
-            'scenes_count': self.scenes.count(),
+            'tests_count': self.tests.count(),
             'envs': {
                 'count': self.envs.count(),
                 'list': [env.id for env in self.envs.order_by(Env.timestamp.desc()).all()]
@@ -207,11 +207,11 @@ class Module(db.Model):
 class Env(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     env_name = db.Column(db.String(255), index=True)
-    env_version = db.Column(db.String(255), index=True)
+    env_desc = db.Column(db.Text())
     env_host = db.Column(db.String(255))
     env_var = db.Column(db.Text())
-    env_param = db.Column(db.Text())
-    env_repeat = db.Column(db.Integer, default=1)
+    extracts = db.Column(db.Text())
+    asserts = db.Column(db.Text())
     timestamp = db.Column(db.DateTime, index=True, default=datetime.now)
     project_id = db.Column(db.Integer, db.ForeignKey('project.id'))
     tests = db.relationship('Test', backref='env', lazy='dynamic')
@@ -220,8 +220,7 @@ class Env(db.Model):
         return '<Env {}>'.format(self.env_name)
 
     def from_dict(self, data):
-        for field in ['env_name', 'env_version', 'env_host',
-                      'env_var', 'env_param', 'env_repeat']:
+        for field in ['env_name', 'env_desc', 'env_host', 'env_var', 'extracts', 'asserts']:
             if field in data:
                 setattr(self, field, data[field])
 
@@ -233,15 +232,15 @@ class Env(db.Model):
             'env_id': self.id,
             'env_name': self.env_name,
             'project_id': self.project_id,
-            'env_version': self.env_version,
+            'env_desc': self.env_desc,
             'env_host': self.env_host,
             'env_var': self.env_var,
-            'env_param': self.env_param,
-            'env_repeat': self.env_repeat,
+            'extracts': self.extracts,
+            'asserts': self.asserts,
             'timestamp': self.timestamp,
             'tests': {
                 'count': self.tests.count(),
-                'list': [test.test_name for test in self.tests.order_by(Test.timestamp.desc()).all()]
+                'list': [test.name for test in self.tests.order_by(Test.timestamp.desc()).all()]
             }
         }
         return data
@@ -280,7 +279,7 @@ class Api(db.Model):
     req_method = db.Column(db.String(255))
     req_temp_host = db.Column(db.String(255))
     req_relate_url = db.Column(db.String(255))
-    req_headers = db.Column(db.String(255))
+    req_headers = db.Column(db.Text())
     req_params = db.Column(db.Text())
     req_data_type = db.Column(db.String(255))
     req_body = db.Column(db.Text())
@@ -362,42 +361,92 @@ class Api(db.Model):
 
 class Test(db.Model):
     id = db.Column(db.Integer, primary_key=True)
-    test_name = db.Column(db.String(255))
+    name = db.Column(db.String(255))
     test_desc = db.Column(db.String(255))
-    req_method = db.Column(db.String(255))
-    req_abs_url = db.Column(db.String(255))
-    req_headers = db.Column(db.String(255))
+    test_ver = db.Column(db.String(255))
+    teststeps = db.Column(db.Text())  # 存储api顺序，及各api与env的关系
+    req_headers = db.Column(db.Text())
     req_params = db.Column(db.Text())
-    req_data_type = db.Column(db.String(255))
     req_body = db.Column(db.Text())
-    extracts = db.Column(db.Text())
-    asserts = db.Column(db.Text())
-    skip_status = db.Column(db.String(255))
     test_result = db.Column(db.String(255))
-    test_type = db.Column(db.String(255))
-    test_sn = db.Column(db.String(255))
     timestamp = db.Column(db.DateTime, index=True, default=datetime.now)
     api_id = db.Column(db.Integer, db.ForeignKey('api.id'))
     env_id = db.Column(db.Integer, db.ForeignKey('env.id'))
-    scene_id = db.Column(db.Integer, db.ForeignKey('scene.id'))
+    project_id = db.Column(db.Integer, db.ForeignKey('project.id'))
     report = db.relationship('Report', backref='test', uselist=False)
 
     def __repr__(self):
         return '<Test {}>'.format(self.name)
 
+    def from_dict(self, data):
+        for field in ['name', 'test_desc', 'test_ver', 'teststeps',
+                      'req_headers', 'req_params', 'req_body']:
+            if field in data:
+                setattr(self, field, data[field])
 
-class Scene(db.Model):
-    id = db.Column(db.Integer, primary_key=True)
-    scene_name = db.Column(db.String(255))
-    scene_desc = db.Column(db.String(255))
-    scene_ver = db.Column(db.String(255))
-    timestamp = db.Column(db.DateTime, index=True, default=datetime.now)
-    project_id = db.Column(db.Integer, db.ForeignKey('project.id'))
-    env_id = db.Column(db.Integer, db.ForeignKey('env.id'))
-    tests = db.relationship('Test', backref='scene', lazy='dynamic')
+        if data['api_id']:
+            self.api_id = data['api_id']
 
-    def __repr__(self):
-        return '<Scene {}>'.format(self.name)
+        if data['env_id']:
+            self.api_id = data['env_id']
+
+    def to_dict(self):
+        data = {
+            'test_id': self.id,
+            'name': self.name,
+            'test_ver': self.test_ver,
+            'test_desc': self.test_desc,
+            'project_name': Project.query.get(self.project_id).project_name,
+            'module_name': Module.query.get(self.module_id).module_name,
+            'env_name': Env.query.get(self.env_id).env_name,
+            'env_ver': Env.query.get(self.env_id).env_ver,
+            'env_host': Env.query.get(self.env_id).env_host,
+            'env_var': Env.query.get(self.env_id).env_var,
+            'teststeps': self.teststeps,
+            'timestamp': self.timestamp
+        }
+        return data
+
+    @staticmethod
+    def to_collection_dict(page_num, per_page):
+        projects = g.current_user.followed_projects().paginate(page_num, per_page, False)
+        project_list = projects.items
+        payload = []
+        for project in project_list:
+            module_list = []
+            for module in project.modules.all():
+                api_list = []
+                for api in module.apis.all():
+                    test_list = []
+                    for test in api.tests.all():
+                        test_data = test.to_dict()
+                        test_list.append(test_data)
+                    api_data = {
+                        'api_id': api.id,
+                        'test_list': test_list
+                    }
+                    api_list.append(api_data)
+                module_data = {
+                    'module_id': module.id,
+                    'api_list': api_list
+                }
+                module_list.append(module_data)
+            project_data = {
+                'project_id': project.id,
+                'module_list': module_list
+            }
+            payload.append(project_data)
+
+        data = {
+            'test_items': payload,
+            'meta': {
+                'has_next': projects.has_next,
+                'next_num': projects.next_num,
+                'has_prev': projects.has_prev,
+                'prev_num': projects.prev_num
+            }
+        }
+        return data
 
 
 class Report(db.Model):

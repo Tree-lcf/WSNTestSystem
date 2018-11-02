@@ -100,29 +100,33 @@ class TestRegLoginCase(unittest.TestCase):
             'project_name': 'app',
             'env_name': 'env_1',
             'env_id': 1,
-            'env_version': '1',
+            'env_desc': '1',
             'operate_type': '1',
             'page_num': '1',
             'per_page': '10',
             'env_host': '127.0.0.1',
             'env_var': 'uuid = 123',
-            'env_param': '[1, 2]',
-            'env_repeat': 1
+            'extracts': '[1, 2]',
+            'asserts': '[True, False]'
         }
         self.envOperate_1_1 = {
             'project_name': 'app',
             'env_id': None,
-            'env_name': 'env_1',
-            'env_version': '2',
+            'env_name': 'env_2',
+            'env_desc': '2',
             'operate_type': '1',
             'page_num': None,
-            'per_page': None
+            'per_page': None,
+            'env_host': '127.0.0.1',
+            'env_var': 'uuid = 123',
+            'extracts': '[1, 2]',
+            'asserts': '[True, False]'
         }
         self.envOperate_3 = {
             'project_name': None,
             'env_id': None,
             'env_name': None,
-            'env_version': None,
+            'env_desc': None,
             'operate_type': '3',
             'page_num': '1',
             'per_page': '20'
@@ -131,7 +135,7 @@ class TestRegLoginCase(unittest.TestCase):
             'project_name': None,
             'env_id': None,
             'env_name': 'aa',
-            'env_version': '1',
+            'env_desc': '1',
             'operate_type': '2',
             'page_num': None,
             'per_page': None
@@ -140,7 +144,7 @@ class TestRegLoginCase(unittest.TestCase):
             'project_name': None,
             'env_id': None,
             'env_name': None,
-            'env_version': None,
+            'env_desc': None,
             'operate_type': '4',
             'page_num': None,
             'per_page': None
@@ -718,6 +722,7 @@ class TestRegLoginCase(unittest.TestCase):
         self.assertTrue(response.status)
         response = requests.post(self.envOperate_url, cookies=cookies, json=self.envOperate_1).json()
         response = AttrDict(response)
+        print('----- add -----')
         print(response)
         self.assertTrue(response.status)
         self.envOperate_2['env_id'] = response.data.env_id
@@ -780,6 +785,7 @@ class TestRegLoginCase(unittest.TestCase):
         self.assertTrue(response.status)
 
         self.apiOperate_2['operate_type'] = '4'
+        self.apiOperate_2['api_id'] = [api_id]
         response = requests.post(self.apiOperate_url, cookies=cookies, json=self.apiOperate_2).json()
         response = AttrDict(response)
         print('----- del -----')

@@ -15,11 +15,14 @@ def before_request():
         return token_auth_error()
 
 
-@bp.route('/apiOperate', methods=['POST'])
-def operate_api():
+@bp.route('/testOperate', methods=['POST'])
+def operate_test():
     '''
-    api_id
-    api_name
+    scene_id
+    scene_name
+    scene_desc
+    scene_name
+    scene_ver
     req_method
     req_temp_host
     req_relat_url
@@ -146,14 +149,4 @@ def operate_api():
         report = tester.run()
         report = json.loads(report)
         return trueReturn(report, 'run success')
-
-
-
-
-
-
-
-
-
-
 
