@@ -18,77 +18,64 @@ def before_request():
 @bp.route('/testOperate', methods=['POST'])
 def operate_test():
     '''
-    module_id
-    project_id
-    operate_type : '1' = 增， '2' = 改， '3' = 查， '4' = 删, '5' = Run
+    operate_type : '1' = 增，改  '2' = 查， '3' = 删, '4' = Run
     '''
     data = request.get_json() or {}
     project_id = data.get('project_id')
-    module_id = data.get('module_id')
     api_id = data.get('api_id')
+    test_id = data.get('test_id')
+    test_name = data.get('name')
+    test_ver = data.get('test_ver')
     operate_type = data.get('operate_type')
 
     if not operate_type:
         return bad_request('must include operate_type')
 
-    # 增
+    # 增，改
     if operate_type == '1':
-        if not module_id:
-            return bad_request('must include module id')
 
-        module = Module.query.get_or_404(module_id)
         project = Project.query.get_or_404(project_id)
+        api = Api.query.get_or_404(api_id)
 
         if project not in g.current_user.followed_projects().all():
             return bad_request('you are not the member of project %s' % project.project_name)
 
-        if module not in project.modules.all():
-            return bad_request('no module %s in project %s' % (module.module_name, project.project_name))
+        if api not in project.apis.all():
+            return bad_request('no api %s in project %s' % (api.name, project.project_name))
 
-        if not api_name:
-            return bad_request('must include api name')
-        if Api.query.filter_by(name=api_name).first():
-            return bad_request('%s already in project %s' % (api_name, project.project_name))
+        if not test_id:
+            if not (test_name or test_ver):
+                return bad_request('please input test name or version')
+            if Test.query.filter_by(name=test_name, test_ver=test_ver).first():
+                return bad_request('Test %s already exists' % test_name)
 
-        api = Api()
-        api.from_dict(data)
-        db.session.add(api)
-        session_commit()
+            test = Test()
+            test.from_dict(data)
+            db.session.add(test)
+            session_commit()
+            data = test.to_dict()
+            response = trueReturn(data, 'create test success')
+            return response
 
-        data = api.to_dict()
-        response = trueReturn(data, 'create Api success')
-        return response
+        if test_id:
+            test = Test.query.get_or_404(test_id)
+            if Project.query.get(test.project_id) not in g.current_user.followed_projects().all():
+                return bad_request('you are not the member of project')
 
-    # 改
-    if operate_type == '2':
-        if project_id:
-            project = Project.query.get_or_404(project_id)
-            if project not in g.current_user.followed_projects().all():
-                return bad_request('you are not the member of project %s' % project.project_name)
+            if (test_name or test_ver) and (test_name != test.name or test_ver != test.test_ver)\
+                    and Test.query.filter_by(name=test_name, test_ver=test_ver).first():
+                return bad_request('please use a different test name or version')
 
-        if module_id:
-            module = Module.query.get_or_404(module_id)
-            if module not in project.modules.all():
-                return bad_request('module %s is not in project %s' % (module.module_name, project.project_name))
+            test.from_dict(data)
+            db.session.add(test)
+            session_commit()
 
-        api = Api.query.get_or_404(api_id)
-        if Project.query.get(api.project_id) not in g.current_user.followed_projects().all():
-            return bad_request('you are not the member of project')
-
-        if api_name and api_name != api.name and \
-                Api.query.filter_by(name=api_name, project_id=project_id).first():
-            return bad_request('please use a different Api name')
-
-        api.from_dict(data)
-        db.session.add(api)
-        session_commit()
-
-        data = api.to_dict()
-        response = trueReturn(data, 'update success')
-        return response
+            data = test.to_dict()
+            response = trueReturn(data, 'update test success')
+            return response
 
     # 查
-    if operate_type == '3':
+    if operate_type == '2':
         '''
            [{
            'project_id': project_id,
@@ -100,27 +87,30 @@ def operate_test():
            ]
            }]
         '''
-        page_num = int(data.get('page_num', 1))
-        per_page = int(data.get('per_page', 10))
-        payload = Api.to_collection_dict(page_num, per_page)
+
+        if test_id:
+            test = Test.query.get_or_404(test_id)
+            return trueReturn(test.to_dict(), 'found it')
+
+        page_num = int(data.get('page_num'))
+        per_page = int(data.get('per_page'))
+        payload = Test.to_collection_dict(page_num, per_page)
         response = trueReturn(payload, 'list success')
         return response
 
     # 删
-    if operate_type == '4':
-        if not api_id:
-            return bad_request('please input api_id')
-        for id in api_id:
-            api = Api.query.get_or_404(id)
-            if Project.query.get(api.project_id) not in g.current_user.followed_projects().all():
-                return bad_request('you are not the member of project')
-            if api.module_id != module_id or api.project_id != project_id:
-                return bad_request('api not in this module or this project, it might be something wrong')
-            db.session.delete(api)
+    if operate_type == '3':
+        if not test_id:
+            return bad_request('please input test_id')
+        for id in test_id:
+            test = Test.query.get_or_404(id)
+            if Project.query.get(test.project_id) not in g.current_user.followed_projects().all():
+                return bad_request('cannot delete it as you are not the member of project')
+            db.session.delete(test)
 
         session_commit()
         data = {
-            'api_id': api_id
+            'test_id': test_id
         }
         response = trueReturn(data, 'delete success')
         return response

@@ -319,7 +319,7 @@ class Api(db.Model):
             'timestamp': self.timestamp,
             'tests': {
                 'count': self.tests.count(),
-                'list': [test.test_name for test in self.tests.order_by(Test.timestamp.desc()).all()]
+                'list': [test.name for test in self.tests.order_by(Test.timestamp.desc()).all()]
             }
         }
         return data
@@ -384,11 +384,14 @@ class Test(db.Model):
             if field in data:
                 setattr(self, field, data[field])
 
+        if data['project_id']:
+            self.project_id = data['project_id']
+
         if data['api_id']:
             self.api_id = data['api_id']
 
         if data['env_id']:
-            self.api_id = data['env_id']
+            self.env_id = data['env_id']
 
     def to_dict(self):
         data = {
@@ -397,11 +400,12 @@ class Test(db.Model):
             'test_ver': self.test_ver,
             'test_desc': self.test_desc,
             'project_name': Project.query.get(self.project_id).project_name,
-            'module_name': Module.query.get(self.module_id).module_name,
+            'module_name': Module.query.get(Api.query.get(self.api_id).module_id).module_name,
             'env_name': Env.query.get(self.env_id).env_name,
-            'env_ver': Env.query.get(self.env_id).env_ver,
             'env_host': Env.query.get(self.env_id).env_host,
             'env_var': Env.query.get(self.env_id).env_var,
+            'extracts': Env.query.get(self.env_id).extracts,
+            'asserts': Env.query.get(self.env_id).asserts,
             'teststeps': self.teststeps,
             'timestamp': self.timestamp
         }
@@ -423,22 +427,22 @@ class Test(db.Model):
                         test_list.append(test_data)
                     api_data = {
                         'api_id': api.id,
-                        'test_list': test_list
+                        'test_items': test_list
                     }
                     api_list.append(api_data)
                 module_data = {
                     'module_id': module.id,
-                    'api_list': api_list
+                    'api_items': api_list
                 }
                 module_list.append(module_data)
             project_data = {
                 'project_id': project.id,
-                'module_list': module_list
+                'module_items': module_list
             }
             payload.append(project_data)
 
         data = {
-            'test_items': payload,
+            'project_items': payload,
             'meta': {
                 'has_next': projects.has_next,
                 'next_num': projects.next_num,
@@ -447,6 +451,75 @@ class Test(db.Model):
             }
         }
         return data
+
+
+# class TestConf(db.Model):
+#     id = db.Column(db.Integer, primary_key=True)
+#     env_name = db.Column(db.String(255), index=True)
+#     env_desc = db.Column(db.Text())
+#     env_host = db.Column(db.String(255))
+#     env_var = db.Column(db.Text())
+#     extracts = db.Column(db.Text())
+#     asserts = db.Column(db.Text())
+#     timestamp = db.Column(db.DateTime, index=True, default=datetime.now)
+#     project_id = db.Column(db.Integer, db.ForeignKey('project.id'))
+#     tests = db.relationship('Test', backref='env', lazy='dynamic')
+#
+#     def __repr__(self):
+#         return '<TestConf {}>'.format(self.env_name)
+#
+#     def from_dict(self, data):
+#         for field in ['env_name', 'env_desc', 'env_host', 'env_var', 'extracts', 'asserts']:
+#             if field in data:
+#                 setattr(self, field, data[field])
+#
+#         if data['project_name']:
+#             self.project_id = Project.query.filter_by(project_name=data['project_name']).first().id
+#
+#     def to_dict(self):
+#         data = {
+#             'env_id': self.id,
+#             'env_name': self.env_name,
+#             'project_id': self.project_id,
+#             'env_desc': self.env_desc,
+#             'env_host': self.env_host,
+#             'env_var': self.env_var,
+#             'extracts': self.extracts,
+#             'asserts': self.asserts,
+#             'timestamp': self.timestamp,
+#             'tests': {
+#                 'count': self.tests.count(),
+#                 'list': [test.name for test in self.tests.order_by(Test.timestamp.desc()).all()]
+#             }
+#         }
+#         return data
+#
+#     @staticmethod
+#     def to_collection_dict(page_num, per_page):
+#         projects = g.current_user.followed_projects().paginate(page_num, per_page, False)
+#         project_list = projects.items
+#         payload = []
+#         for project in project_list:
+#             env_list = []
+#             for env in project.envs.all():
+#                 env_data = env.to_dict()
+#                 env_list.append(env_data)
+#             project_data = {
+#                 'project_name': project.project_name,
+#                 'env_list': env_list
+#             }
+#             payload.append(project_data)
+#
+#         data = {
+#             'env_items': payload,
+#             'meta': {
+#                 'has_next': projects.has_next,
+#                 'next_num': projects.next_num,
+#                 'has_prev': projects.has_prev,
+#                 'prev_num': projects.prev_num
+#             }
+#         }
+#         return data
 
 
 class Report(db.Model):

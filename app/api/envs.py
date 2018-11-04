@@ -80,6 +80,10 @@ def operate_env():
         'env_list':[{}]
         }]
         '''
+        if env_id:
+            env = Env.query.get_or_404(env_id)
+            return trueReturn(env.to_dict(), 'found it')
+
         page_num = int(data.get('page_num', 1))
         per_page = int(data.get('per_page', 10))
         payload = Env.to_collection_dict(page_num, per_page)
