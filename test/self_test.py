@@ -3,7 +3,7 @@ import unittest
 import requests
 import json
 from app import create_app, db
-from app.models import User, Project, Module, Env, Api, Test
+from app.models import User, Project, Module, Env, Api, Test, TestConf
 from config import Config
 from app.common import AttrDict
 
@@ -97,7 +97,7 @@ class TestRestApiCase(unittest.TestCase):
             'operate_type': '4'
         }
         self.envOperate_1 = {
-            'project_name': 'app',
+            'project_id': '1',
             'env_name': 'env_1',
             'env_id': 1,
             'env_desc': '1',
@@ -107,10 +107,11 @@ class TestRestApiCase(unittest.TestCase):
             'env_host': '127.0.0.1',
             'env_var': 'uuid = 123',
             'extracts': '[1, 2]',
-            'asserts': '[True, False]'
+            'asserts': '[True, False]',
+            'test_id': None
         }
         self.envOperate_1_1 = {
-            'project_name': 'app',
+            'project_id': 'app',
             'env_id': None,
             'env_name': 'env_2',
             'env_desc': '2',
@@ -120,34 +121,38 @@ class TestRestApiCase(unittest.TestCase):
             'env_host': '127.0.0.1',
             'env_var': 'uuid = 123',
             'extracts': '[1, 2]',
-            'asserts': '[True, False]'
+            'asserts': '[True, False]',
+            'test_id': None
         }
         self.envOperate_3 = {
-            'project_name': None,
+            'project_id': None,
             'env_id': None,
             'env_name': None,
             'env_desc': None,
             'operate_type': '3',
             'page_num': '1',
-            'per_page': '20'
+            'per_page': '20',
+            'test_id': None
         }
         self.envOperate_2 = {
-            'project_name': None,
+            'project_id': None,
             'env_id': None,
             'env_name': 'aa',
             'env_desc': '1',
             'operate_type': '2',
             'page_num': None,
-            'per_page': None
+            'per_page': None,
+            'test_id': None
         }
         self.envOperate_4 = {
-            'project_name': None,
+            'project_id': None,
             'env_id': None,
             'env_name': None,
             'env_desc': None,
             'operate_type': '4',
             'page_num': None,
-            'per_page': None
+            'per_page': None,
+            'test_id': None
         }
         self.apiOperate_1 = {
             'project_id': 1,
@@ -215,6 +220,16 @@ class TestRestApiCase(unittest.TestCase):
             'page_num': 1,
             'per_page': 10
         }
+        self.testConfOperate_1 = {
+            'api_id': 1,
+            'env_id': 1,
+            'testconf_id': 1,
+            'req_headers': '{"Content-Type": "application/json"}',
+            'req_params': '',
+            'req_body': '{"type": "ios"}',
+            'req_cookies': '{"token": "12ww"}',
+            'operate_type': '1',
+        }
 
         host = 'http://127.0.0.1:5000'
         self.register_url = host + '/auth/register'
@@ -235,6 +250,7 @@ class TestRestApiCase(unittest.TestCase):
         self.envOperate_url = host + '/api/envOperate'
         self.apiOperate_url = host + '/api/apiOperate'
         self.testOperate_url = host + '/api/testOperate'
+        self.testConfOperate_url = host + '/api/testConfOperate'
 
     def tearDown(self):
         db.session.remove()
@@ -244,6 +260,7 @@ class TestRestApiCase(unittest.TestCase):
         envs = Env.query.all()
         apis = Api.query.all()
         tests = Test.query.all()
+        testconfs = TestConf.query.all()
 
         for user in users:
             db.session.delete(user)
@@ -263,35 +280,10 @@ class TestRestApiCase(unittest.TestCase):
         for test in tests:
             db.session.delete(test)
 
-        # user1 = User.query.filter_by(username='003').first()
-        # user2 = User.query.filter_by(username='007').first()
-        # project1 = Project.query.filter_by(project_name='app').first()
-        # project2 = Project.query.filter_by(project_name='cpp').first()
-        # module1 = Module.query.filter_by(module_name='app_module_1').first()
-        # module2 = Module.query.filter_by(module_name='app_module_2').first()
-        # module3 = Module.query.filter_by(module_name='aa').first()
-        # module4 = Module.query.filter_by(module_name='bb').first()
-        # # try:
-        # if user1:
-        #     db.session.delete(user1)
-        # if user2:
-        #     db.session.delete(user2)
-        # if project1:
-        #     db.session.delete(project1)
-        # if project2:
-        #     db.session.delete(project2)
-        # if module1:
-        #     db.session.delete(module1)
-        # if module2:
-        #     db.session.delete(module2)
-        # if module3:
-        #     db.session.delete(module3)
-        # if module4:
-        #     db.session.delete(module4)
+        # for testconf in testconfs:
+        #     db.session.delete(testconf)
 
         db.session.commit()
-        # except Exception as error:
-        #     print(error)
 
         self.app_context.pop()
 
@@ -739,12 +731,18 @@ class TestRestApiCase(unittest.TestCase):
             'project_name': 'app',
             'owner_name': '003'
         }
-        requests.post(self.add_project_url, cookies=cookies, json=payload)
+        response = requests.post(self.add_project_url, cookies=cookies, json=payload).json()
+        response = AttrDict(response)
+
+        project_id = response.data.project_id
+        self.envOperate_1_1['project_id'] = project_id
         response = requests.post(self.envOperate_url, cookies=cookies, json=self.envOperate_1_1).json()
         response = AttrDict(response)
         print('----- add -----')
         print(response)
         self.assertTrue(response.status)
+
+        self.envOperate_1['project_id'] = project_id
         response = requests.post(self.envOperate_url, cookies=cookies, json=self.envOperate_1).json()
         response = AttrDict(response)
         print('----- add -----')
@@ -849,6 +847,8 @@ class TestRestApiCase(unittest.TestCase):
         api_id = response.data.api_id
         print(api_id)
         print(Api.query.get(api_id))
+
+        self.envOperate_1_1['project_id'] = project_id
         response = requests.post(self.envOperate_url, cookies=cookies, json=self.envOperate_1_1).json()
         response = AttrDict(response)
 
@@ -908,6 +908,72 @@ class TestRestApiCase(unittest.TestCase):
         response = requests.post(self.testOperate_url, cookies=cookies, json=self.testOperate_1).json()
         response = AttrDict(response)
         print('----- list -----')
+        print(response)
+        self.assertTrue(response.status)
+
+    def test_operate_testconf_success(self):
+        requests.post(self.register_url, json=self.reg_data)
+        response = requests.post(self.login_url, json=self.login_data).json()
+        response = AttrDict(response)
+        cookies = {'token': response.data.token}
+        payload = {
+            'project_name': 'app',
+            'owner_name': '003'
+        }
+        response = requests.post(self.add_project_url, cookies=cookies, json=payload).json()
+        response = AttrDict(response)
+
+        project_id = response.data.project_id
+
+        response = requests.post(self.moduleOperate_url, cookies=cookies, json=self.moduleOperate_1).json()
+        response = AttrDict(response)
+        module_id = response.data.module_id
+        self.apiOperate_1['project_id'] = project_id
+        self.apiOperate_1['module_id'] = module_id
+        response = requests.post(self.apiOperate_url, cookies=cookies, json=self.apiOperate_1).json()
+        response = AttrDict(response)
+        self.assertTrue(response.status)
+
+        api_id = response.data.api_id
+
+        self.envOperate_1_1['project_id'] = project_id
+        response = requests.post(self.envOperate_url, cookies=cookies, json=self.envOperate_1_1).json()
+        response = AttrDict(response)
+
+        env_id = response.data.env_id
+
+        self.testConfOperate_1['api_id'] = api_id
+        self.testConfOperate_1['env_id'] = env_id
+        self.testConfOperate_1['testconf_id'] = ''
+
+        response = requests.post(self.testConfOperate_url, cookies=cookies, json=self.testConfOperate_1).json()
+        response = AttrDict(response)
+        print('----- add -----')
+        print(response)
+        self.assertTrue(response.status)
+
+        testconf_id = response.data.testconf_id
+        self.testConfOperate_1['testconf_id'] = testconf_id
+
+        response = requests.post(self.testConfOperate_url, cookies=cookies, json=self.testConfOperate_1).json()
+        response = AttrDict(response)
+        print('----- update -----')
+        print(response)
+        self.assertTrue(response.status)
+
+        self.testConfOperate_1['operate_type'] = '2'
+
+        response = requests.post(self.testConfOperate_url, cookies=cookies, json=self.testConfOperate_1).json()
+        response = AttrDict(response)
+        print('----- find -----')
+        print(response)
+        self.assertTrue(response.status)
+
+        self.testConfOperate_1['operate_type'] = '3'
+
+        response = requests.post(self.testConfOperate_url, cookies=cookies, json=self.testConfOperate_1).json()
+        response = AttrDict(response)
+        print('----- delete -----')
         print(response)
         self.assertTrue(response.status)
 

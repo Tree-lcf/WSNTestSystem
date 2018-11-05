@@ -25,7 +25,6 @@ def operate_test():
     api_id = data.get('api_id')
     test_id = data.get('test_id')
     test_name = data.get('name')
-    test_ver = data.get('test_ver')
     operate_type = data.get('operate_type')
 
     if not operate_type:
@@ -44,9 +43,9 @@ def operate_test():
             return bad_request('no api %s in project %s' % (api.name, project.project_name))
 
         if not test_id:
-            if not (test_name or test_ver):
-                return bad_request('please input test name or version')
-            if Test.query.filter_by(name=test_name, test_ver=test_ver).first():
+            if not test_name:
+                return bad_request('please input test name')
+            if Test.query.filter_by(name=test_name).first():
                 return bad_request('Test %s already exists' % test_name)
 
             test = Test()
@@ -62,8 +61,8 @@ def operate_test():
             if Project.query.get(test.project_id) not in g.current_user.followed_projects().all():
                 return bad_request('you are not the member of project')
 
-            if (test_name or test_ver) and (test_name != test.name or test_ver != test.test_ver)\
-                    and Test.query.filter_by(name=test_name, test_ver=test_ver).first():
+            if test_name and test_name != test.name \
+                    and Test.query.filter_by(name=test_name).first():
                 return bad_request('please use a different test name or version')
 
             test.from_dict(data)

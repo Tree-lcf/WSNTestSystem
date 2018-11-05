@@ -16,7 +16,7 @@ def before_request():
 @bp.route('/envOperate', methods=['POST'])
 def operate_env():
     data = request.get_json() or {}
-    project_name = data.get('project_name')
+    project_id = data.get('project_id')
     env_name = data.get('env_name')
     env_id = data.get('env_id')
     operate_type = data.get('operate_type')
@@ -26,16 +26,16 @@ def operate_env():
 
     # 增
     if operate_type == '1':
-        if not project_name:
-            return bad_request('must include project name')
-        project = Project.query.filter_by(project_name=project_name).first_or_404()
+        if not project_id:
+            return bad_request('must include project_id')
+        project = Project.query.get_or_404(project_id)
         if project not in g.current_user.followed_projects().all():
-            return bad_request('you are not the member of project %s' % project_name)
+            return bad_request('you are not the member of project %s' % project.project_name)
 
         if not env_name:
             return bad_request('must include environment name')
         if Env.query.filter_by(env_name=env_name).first():
-            return bad_request('there is environment %s in this project %s' % (env_name, project_name))
+            return bad_request('there is environment %s in this project %s' % (env_name, project.project_name))
 
         env = Env()
         env.from_dict(data)
@@ -48,10 +48,10 @@ def operate_env():
 
     # 改
     if operate_type == '2':
-        if project_name:
-            project = Project.query.filter_by(project_name=project_name).first_or_404()
+        if project_id:
+            project = Project.query.get_or_404(project_id)
             if project not in g.current_user.followed_projects().all():
-                return bad_request('you are not the member of project %s' % project_name)
+                return bad_request('you are not the member of project %s' % project.project_name)
 
         env = Env.query.get_or_404(env_id)
         if Project.query.get(env.project_id) not in g.current_user.followed_projects().all():

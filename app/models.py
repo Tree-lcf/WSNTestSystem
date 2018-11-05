@@ -215,6 +215,7 @@ class Env(db.Model):
     timestamp = db.Column(db.DateTime, index=True, default=datetime.now)
     project_id = db.Column(db.Integer, db.ForeignKey('project.id'))
     tests = db.relationship('Test', backref='env', lazy='dynamic')
+    testconfs = db.relationship('TestConf', backref='env', lazy='dynamic')
 
     def __repr__(self):
         return '<Env {}>'.format(self.env_name)
@@ -224,8 +225,8 @@ class Env(db.Model):
             if field in data:
                 setattr(self, field, data[field])
 
-        if data['project_name']:
-            self.project_id = Project.query.filter_by(project_name=data['project_name']).first().id
+        if data['project_id']:
+            self.project_id = data['project_id']
 
     def to_dict(self):
         data = {
@@ -240,7 +241,11 @@ class Env(db.Model):
             'timestamp': self.timestamp,
             'tests': {
                 'count': self.tests.count(),
-                'list': [test.name for test in self.tests.order_by(Test.timestamp.desc()).all()]
+                'list': [test.id for test in self.tests.order_by(Test.timestamp.desc()).all()]
+            },
+            'testconfs': {
+                'count': self.testconfs.count(),
+                'list': [testconf.id for testconf in self.testconfs.order_by(TestConf.timestamp.desc()).all()]
             }
         }
         return data
@@ -287,6 +292,7 @@ class Api(db.Model):
     module_id = db.Column(db.Integer, db.ForeignKey('module.id'))
     project_id = db.Column(db.Integer, db.ForeignKey('project.id'))
     tests = db.relationship('Test', backref='api', lazy='dynamic')
+    testconfs = db.relationship('TestConf', backref='api', lazy='dynamic')
 
     def __repr__(self):
         return '<Api {}>'.format(self.name)
@@ -361,26 +367,21 @@ class Api(db.Model):
 
 class Test(db.Model):
     id = db.Column(db.Integer, primary_key=True)
+    project_id = db.Column(db.Integer, db.ForeignKey('project.id'))
+    api_id = db.Column(db.Integer, db.ForeignKey('api.id'))
     name = db.Column(db.String(255))
     test_desc = db.Column(db.String(255))
-    test_ver = db.Column(db.String(255))
-    teststeps = db.Column(db.Text())  # 存储api顺序，及各api与env的关系
-    req_headers = db.Column(db.Text())
-    req_params = db.Column(db.Text())
-    req_body = db.Column(db.Text())
+    env_id = db.Column(db.Integer, db.ForeignKey('env.id'))
+    teststeps = db.Column(db.Text())  # [testconf...]
     test_result = db.Column(db.String(255))
     timestamp = db.Column(db.DateTime, index=True, default=datetime.now)
-    api_id = db.Column(db.Integer, db.ForeignKey('api.id'))
-    env_id = db.Column(db.Integer, db.ForeignKey('env.id'))
-    project_id = db.Column(db.Integer, db.ForeignKey('project.id'))
     report = db.relationship('Report', backref='test', uselist=False)
 
     def __repr__(self):
         return '<Test {}>'.format(self.name)
 
     def from_dict(self, data):
-        for field in ['name', 'test_desc', 'test_ver', 'teststeps',
-                      'req_headers', 'req_params', 'req_body']:
+        for field in ['name', 'test_desc', 'teststeps']:
             if field in data:
                 setattr(self, field, data[field])
 
@@ -394,18 +395,21 @@ class Test(db.Model):
             self.env_id = data['env_id']
 
     def to_dict(self):
+        api = Api.query.get(self.api_id)
+        env = Env.query.get(self.env_id)
         data = {
             'test_id': self.id,
             'name': self.name,
-            'test_ver': self.test_ver,
             'test_desc': self.test_desc,
             'project_name': Project.query.get(self.project_id).project_name,
             'module_name': Module.query.get(Api.query.get(self.api_id).module_id).module_name,
-            'env_name': Env.query.get(self.env_id).env_name,
-            'env_host': Env.query.get(self.env_id).env_host,
-            'env_var': Env.query.get(self.env_id).env_var,
-            'extracts': Env.query.get(self.env_id).extracts,
-            'asserts': Env.query.get(self.env_id).asserts,
+            'api_name': api.name,
+            'api_url': api.req_relate_url,
+            'env_name': env.env_name,
+            'env_host': env.env_host,
+            'env_var': env.env_var,
+            'extracts': env.extracts,
+            'asserts': env.asserts,
             'teststeps': self.teststeps,
             'timestamp': self.timestamp
         }
@@ -453,73 +457,41 @@ class Test(db.Model):
         return data
 
 
-# class TestConf(db.Model):
-#     id = db.Column(db.Integer, primary_key=True)
-#     env_name = db.Column(db.String(255), index=True)
-#     env_desc = db.Column(db.Text())
-#     env_host = db.Column(db.String(255))
-#     env_var = db.Column(db.Text())
-#     extracts = db.Column(db.Text())
-#     asserts = db.Column(db.Text())
-#     timestamp = db.Column(db.DateTime, index=True, default=datetime.now)
-#     project_id = db.Column(db.Integer, db.ForeignKey('project.id'))
-#     tests = db.relationship('Test', backref='env', lazy='dynamic')
-#
-#     def __repr__(self):
-#         return '<TestConf {}>'.format(self.env_name)
-#
-#     def from_dict(self, data):
-#         for field in ['env_name', 'env_desc', 'env_host', 'env_var', 'extracts', 'asserts']:
-#             if field in data:
-#                 setattr(self, field, data[field])
-#
-#         if data['project_name']:
-#             self.project_id = Project.query.filter_by(project_name=data['project_name']).first().id
-#
-#     def to_dict(self):
-#         data = {
-#             'env_id': self.id,
-#             'env_name': self.env_name,
-#             'project_id': self.project_id,
-#             'env_desc': self.env_desc,
-#             'env_host': self.env_host,
-#             'env_var': self.env_var,
-#             'extracts': self.extracts,
-#             'asserts': self.asserts,
-#             'timestamp': self.timestamp,
-#             'tests': {
-#                 'count': self.tests.count(),
-#                 'list': [test.name for test in self.tests.order_by(Test.timestamp.desc()).all()]
-#             }
-#         }
-#         return data
-#
-#     @staticmethod
-#     def to_collection_dict(page_num, per_page):
-#         projects = g.current_user.followed_projects().paginate(page_num, per_page, False)
-#         project_list = projects.items
-#         payload = []
-#         for project in project_list:
-#             env_list = []
-#             for env in project.envs.all():
-#                 env_data = env.to_dict()
-#                 env_list.append(env_data)
-#             project_data = {
-#                 'project_name': project.project_name,
-#                 'env_list': env_list
-#             }
-#             payload.append(project_data)
-#
-#         data = {
-#             'env_items': payload,
-#             'meta': {
-#                 'has_next': projects.has_next,
-#                 'next_num': projects.next_num,
-#                 'has_prev': projects.has_prev,
-#                 'prev_num': projects.prev_num
-#             }
-#         }
-#         return data
+class TestConf(db.Model):
+    id = db.Column(db.Integer, primary_key=True)
+    timestamp = db.Column(db.DateTime, index=True, default=datetime.now)
+    api_id = db.Column(db.Integer, db.ForeignKey('api.id'))
+    env_id = db.Column(db.Integer, db.ForeignKey('env.id'))
+    req_params = db.Column(db.Text())
+    req_headers = db.Column(db.Text())
+    req_cookies = db.Column(db.Text())
+    req_body = db.Column(db.Text())
+
+    def __repr__(self):
+        return '<TestConf {}>'.format(self.id)
+
+    def from_dict(self, data):
+        for field in ['req_params', 'req_headers', 'req_cookies', 'req_body']:
+            if field in data:
+                setattr(self, field, data[field])
+
+        self.api_id = data['api_id']
+
+        if data['env_id']:
+            self.env_id = data['env_id']
+
+    def to_dict(self):
+        data = {
+            'testconf_id': self.id,
+            'api_id': self.api_id,
+            'env_id': self.env_id,
+            'timestamp': self.timestamp,
+            'req_params': self.req_params,
+            'req_headers': self.req_headers,
+            'req_cookies': self.req_cookies,
+            'req_body': self.req_body,
+        }
+        return data
 
 
 class Report(db.Model):
