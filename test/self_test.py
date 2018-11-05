@@ -3,7 +3,7 @@ import unittest
 import requests
 import json
 from app import create_app, db
-from app.models import User, Project, Module, Env, Api, Test, TestConf
+from app.models import User, Project, Module, Env, Api, TestCase, TestStep
 from config import Config
 from app.common import AttrDict
 
@@ -204,15 +204,14 @@ class TestRestApiCase(unittest.TestCase):
             'page_num': None,
             'per_page': None
         }
-        self.testOperate_1 = {
+        self.testcaseOperate_1 = {
             'project_id': 1,
             'api_id': 1,
-            'test_id': 1,
+            'testcase_id': 1,
             'env_id': 1,
             'name': 'test_1',
-            'test_ver': 'test_ver',
             'test_desc': 'test_desc',
-            'teststeps': '[{{},{}}]',
+            'teststeps': '[teststep, teststep]',
             'req_headers': '{"Content-Type": "application/json"}',
             'req_params': '',
             'req_body': '{"type": "ios"}',
@@ -220,10 +219,10 @@ class TestRestApiCase(unittest.TestCase):
             'page_num': 1,
             'per_page': 10
         }
-        self.testConfOperate_1 = {
+        self.teststepOperate_1 = {
             'api_id': 1,
             'env_id': 1,
-            'testconf_id': 1,
+            'teststep_id': 1,
             'req_headers': '{"Content-Type": "application/json"}',
             'req_params': '',
             'req_body': '{"type": "ios"}',
@@ -249,8 +248,8 @@ class TestRestApiCase(unittest.TestCase):
         self.moduleOperate_url = host + '/api/moduleOperate'
         self.envOperate_url = host + '/api/envOperate'
         self.apiOperate_url = host + '/api/apiOperate'
-        self.testOperate_url = host + '/api/testOperate'
-        self.testConfOperate_url = host + '/api/testConfOperate'
+        self.testCaseOperate_url = host + '/api/testCaseOperate'
+        self.testStepOperate_url = host + '/api/testStepOperate'
 
     def tearDown(self):
         db.session.remove()
@@ -259,8 +258,8 @@ class TestRestApiCase(unittest.TestCase):
         modules = Module.query.all()
         envs = Env.query.all()
         apis = Api.query.all()
-        tests = Test.query.all()
-        testconfs = TestConf.query.all()
+        testcases = TestCase.query.all()
+        teststeps = TestStep.query.all()
 
         for user in users:
             db.session.delete(user)
@@ -277,11 +276,11 @@ class TestRestApiCase(unittest.TestCase):
         for api in apis:
             db.session.delete(api)
 
-        for test in tests:
-            db.session.delete(test)
+        for testcase in testcases:
+            db.session.delete(testcase)
 
-        # for testconf in testconfs:
-        #     db.session.delete(testconf)
+        for teststep in teststeps:
+            db.session.delete(teststep)
 
         db.session.commit()
 
@@ -821,7 +820,7 @@ class TestRestApiCase(unittest.TestCase):
         print(response)
         self.assertTrue(response.status)
 
-    def test_operate_test_success(self):
+    def test_operate_testcase_success(self):
         requests.post(self.register_url, json=self.reg_data)
         response = requests.post(self.login_url, json=self.login_data).json()
         response = AttrDict(response)
@@ -854,64 +853,64 @@ class TestRestApiCase(unittest.TestCase):
 
         env_id = response.data.env_id
 
-        self.testOperate_1['project_id'] = project_id
-        self.testOperate_1['api_id'] = api_id
-        self.testOperate_1['env_id'] = env_id
-        self.testOperate_1['test_id'] = None
+        self.testcaseOperate_1['project_id'] = project_id
+        self.testcaseOperate_1['api_id'] = api_id
+        self.testcaseOperate_1['env_id'] = env_id
+        self.testcaseOperate_1['testcase_id'] = None
 
-        response = requests.post(self.testOperate_url, cookies=cookies, json=self.testOperate_1).json()
+        response = requests.post(self.testCaseOperate_url, cookies=cookies, json=self.testcaseOperate_1).json()
         response = AttrDict(response)
         print('----- add -----')
         print(response)
         self.assertTrue(response.status)
 
         # test_id = response.data.project_items[0].module_items[0].api_items[0].test_items[0].test_id
-        test_id = response.data.test_id
-        self.testOperate_1['test_id'] = test_id
-        self.testOperate_1['name'] = 'test_2'
+        testcase_id = response.data.testcase_id
+        self.testcaseOperate_1['testcase_id'] = testcase_id
+        self.testcaseOperate_1['name'] = 'test_2'
 
-        response = requests.post(self.testOperate_url, cookies=cookies, json=self.testOperate_1).json()
+        response = requests.post(self.testCaseOperate_url, cookies=cookies, json=self.testcaseOperate_1).json()
         response = AttrDict(response)
         print('----- update -----')
         print(response)
         self.assertTrue(response.status)
 
-        self.testOperate_1['operate_type'] = '2'
+        self.testcaseOperate_1['operate_type'] = '2'
 
-        response = requests.post(self.testOperate_url, cookies=cookies, json=self.testOperate_1).json()
+        response = requests.post(self.testCaseOperate_url, cookies=cookies, json=self.testcaseOperate_1).json()
         response = AttrDict(response)
         print('----- find -----')
         print(response)
         self.assertTrue(response.status)
 
-        self.testOperate_1['operate_type'] = '3'
-        self.testOperate_1['test_id'] = [test_id]
+        self.testcaseOperate_1['operate_type'] = '3'
+        self.testcaseOperate_1['testcase_id'] = [testcase_id]
 
-        response = requests.post(self.testOperate_url, cookies=cookies, json=self.testOperate_1).json()
+        response = requests.post(self.testCaseOperate_url, cookies=cookies, json=self.testcaseOperate_1).json()
         response = AttrDict(response)
         print('----- delete -----')
         print(response)
         self.assertTrue(response.status)
 
-        self.testOperate_1['test_id'] = None
-        self.testOperate_1['name'] = 'test_3'
-        self.testOperate_1['operate_type'] = '1'
+        self.testcaseOperate_1['testcase_id'] = None
+        self.testcaseOperate_1['name'] = 'test_3'
+        self.testcaseOperate_1['operate_type'] = '1'
 
-        response = requests.post(self.testOperate_url, cookies=cookies, json=self.testOperate_1).json()
+        response = requests.post(self.testCaseOperate_url, cookies=cookies, json=self.testcaseOperate_1).json()
         response = AttrDict(response)
         print('----- add -----')
         print(response)
         self.assertTrue(response.status)
 
-        self.testOperate_1['operate_type'] = '2'
+        self.testcaseOperate_1['operate_type'] = '2'
 
-        response = requests.post(self.testOperate_url, cookies=cookies, json=self.testOperate_1).json()
+        response = requests.post(self.testCaseOperate_url, cookies=cookies, json=self.testcaseOperate_1).json()
         response = AttrDict(response)
         print('----- list -----')
         print(response)
         self.assertTrue(response.status)
 
-    def test_operate_testconf_success(self):
+    def test_operate_teststep_success(self):
         requests.post(self.register_url, json=self.reg_data)
         response = requests.post(self.login_url, json=self.login_data).json()
         response = AttrDict(response)
@@ -942,36 +941,36 @@ class TestRestApiCase(unittest.TestCase):
 
         env_id = response.data.env_id
 
-        self.testConfOperate_1['api_id'] = api_id
-        self.testConfOperate_1['env_id'] = env_id
-        self.testConfOperate_1['testconf_id'] = ''
+        self.teststepOperate_1['api_id'] = api_id
+        self.teststepOperate_1['env_id'] = env_id
+        self.teststepOperate_1['teststep_id'] = ''
 
-        response = requests.post(self.testConfOperate_url, cookies=cookies, json=self.testConfOperate_1).json()
+        response = requests.post(self.testStepOperate_url, cookies=cookies, json=self.teststepOperate_1).json()
         response = AttrDict(response)
         print('----- add -----')
         print(response)
         self.assertTrue(response.status)
 
-        testconf_id = response.data.testconf_id
-        self.testConfOperate_1['testconf_id'] = testconf_id
+        teststep_id = response.data.teststep_id
+        self.teststepOperate_1['teststep_id'] = teststep_id
 
-        response = requests.post(self.testConfOperate_url, cookies=cookies, json=self.testConfOperate_1).json()
+        response = requests.post(self.testStepOperate_url, cookies=cookies, json=self.teststepOperate_1).json()
         response = AttrDict(response)
         print('----- update -----')
         print(response)
         self.assertTrue(response.status)
 
-        self.testConfOperate_1['operate_type'] = '2'
+        self.teststepOperate_1['operate_type'] = '2'
 
-        response = requests.post(self.testConfOperate_url, cookies=cookies, json=self.testConfOperate_1).json()
+        response = requests.post(self.testStepOperate_url, cookies=cookies, json=self.teststepOperate_1).json()
         response = AttrDict(response)
         print('----- find -----')
         print(response)
         self.assertTrue(response.status)
 
-        self.testConfOperate_1['operate_type'] = '3'
+        self.teststepOperate_1['operate_type'] = '3'
 
-        response = requests.post(self.testConfOperate_url, cookies=cookies, json=self.testConfOperate_1).json()
+        response = requests.post(self.testStepOperate_url, cookies=cookies, json=self.teststepOperate_1).json()
         response = AttrDict(response)
         print('----- delete -----')
         print(response)

@@ -114,7 +114,7 @@ class Project(db.Model):
     modules = db.relationship('Module', backref='project', lazy='dynamic')
     envs = db.relationship('Env', backref='project', lazy='dynamic')
     apis = db.relationship('Api', backref='project', lazy='dynamic')
-    tests = db.relationship('Test', backref='project', lazy='dynamic')
+    testcases = db.relationship('TestCase', backref='project', lazy='dynamic')
     users = db.relationship(
         'User', secondary=project_user,
         backref=db.backref('projects', lazy='dynamic'), lazy='dynamic')
@@ -137,7 +137,7 @@ class Project(db.Model):
                 'count': self.modules.count(),
                 'list': [module.module_name for module in self.modules.order_by(Module.timestamp.desc()).all()]
             },
-            'tests_count': self.tests.count(),
+            'testcases_count': self.testcases.count(),
             'envs': {
                 'count': self.envs.count(),
                 'list': [env.id for env in self.envs.order_by(Env.timestamp.desc()).all()]
@@ -214,8 +214,8 @@ class Env(db.Model):
     asserts = db.Column(db.Text())
     timestamp = db.Column(db.DateTime, index=True, default=datetime.now)
     project_id = db.Column(db.Integer, db.ForeignKey('project.id'))
-    tests = db.relationship('Test', backref='env', lazy='dynamic')
-    testconfs = db.relationship('TestConf', backref='env', lazy='dynamic')
+    testcases = db.relationship('TestCase', backref='env', lazy='dynamic')
+    teststeps = db.relationship('TestStep', backref='env', lazy='dynamic')
 
     def __repr__(self):
         return '<Env {}>'.format(self.env_name)
@@ -239,13 +239,13 @@ class Env(db.Model):
             'extracts': self.extracts,
             'asserts': self.asserts,
             'timestamp': self.timestamp,
-            'tests': {
-                'count': self.tests.count(),
-                'list': [test.id for test in self.tests.order_by(Test.timestamp.desc()).all()]
+            'testcases': {
+                'count': self.testcases.count(),
+                'list': [testcase.id for testcase in self.testcases.order_by(TestCase.timestamp.desc()).all()]
             },
-            'testconfs': {
-                'count': self.testconfs.count(),
-                'list': [testconf.id for testconf in self.testconfs.order_by(TestConf.timestamp.desc()).all()]
+            'teststeps': {
+                'count': self.teststeps.count(),
+                'list': [teststep.id for teststep in self.teststeps.order_by(TestStep.timestamp.desc()).all()]
             }
         }
         return data
@@ -291,8 +291,8 @@ class Api(db.Model):
     timestamp = db.Column(db.DateTime, index=True, default=datetime.now)
     module_id = db.Column(db.Integer, db.ForeignKey('module.id'))
     project_id = db.Column(db.Integer, db.ForeignKey('project.id'))
-    tests = db.relationship('Test', backref='api', lazy='dynamic')
-    testconfs = db.relationship('TestConf', backref='api', lazy='dynamic')
+    testcases = db.relationship('TestCase', backref='api', lazy='dynamic')
+    teststeps = db.relationship('TestStep', backref='api', lazy='dynamic')
 
     def __repr__(self):
         return '<Api {}>'.format(self.name)
@@ -323,9 +323,9 @@ class Api(db.Model):
             'req_data_type': self.req_data_type,
             'req_body': self.req_body,
             'timestamp': self.timestamp,
-            'tests': {
-                'count': self.tests.count(),
-                'list': [test.name for test in self.tests.order_by(Test.timestamp.desc()).all()]
+            'testcases': {
+                'count': self.testcases.count(),
+                'list': [testcase.name for testcase in self.testcases.order_by(TestCase.timestamp.desc()).all()]
             }
         }
         return data
@@ -365,20 +365,21 @@ class Api(db.Model):
         return data
 
 
-class Test(db.Model):
+class TestCase(db.Model):
+    __tablename__ = 'testcase'
     id = db.Column(db.Integer, primary_key=True)
     project_id = db.Column(db.Integer, db.ForeignKey('project.id'))
     api_id = db.Column(db.Integer, db.ForeignKey('api.id'))
     name = db.Column(db.String(255))
     test_desc = db.Column(db.String(255))
     env_id = db.Column(db.Integer, db.ForeignKey('env.id'))
-    teststeps = db.Column(db.Text())  # [testconf...]
+    teststeps = db.Column(db.Text())  # [teststep_id...]
     test_result = db.Column(db.String(255))
     timestamp = db.Column(db.DateTime, index=True, default=datetime.now)
-    report = db.relationship('Report', backref='test', uselist=False)
+    report = db.relationship('Report', backref='testcase', uselist=False)
 
     def __repr__(self):
-        return '<Test {}>'.format(self.name)
+        return '<TestCase {}>'.format(self.name)
 
     def from_dict(self, data):
         for field in ['name', 'test_desc', 'teststeps']:
@@ -398,7 +399,7 @@ class Test(db.Model):
         api = Api.query.get(self.api_id)
         env = Env.query.get(self.env_id)
         data = {
-            'test_id': self.id,
+            'testcase_id': self.id,
             'name': self.name,
             'test_desc': self.test_desc,
             'project_name': Project.query.get(self.project_id).project_name,
@@ -418,30 +419,30 @@ class Test(db.Model):
     @staticmethod
     def to_collection_dict(page_num, per_page):
         projects = g.current_user.followed_projects().paginate(page_num, per_page, False)
-        project_list = projects.items
+        project_items = projects.items
         payload = []
-        for project in project_list:
-            module_list = []
+        for project in project_items:
+            module_items = []
             for module in project.modules.all():
-                api_list = []
+                api_items = []
                 for api in module.apis.all():
-                    test_list = []
-                    for test in api.tests.all():
-                        test_data = test.to_dict()
-                        test_list.append(test_data)
+                    testcases = []
+                    for testcase in api.testcases.all():
+                        testcase_data = testcase.to_dict()
+                        testcases.append(testcase_data)
                     api_data = {
                         'api_id': api.id,
-                        'test_items': test_list
+                        'testcases': testcases
                     }
-                    api_list.append(api_data)
+                    api_items.append(api_data)
                 module_data = {
                     'module_id': module.id,
-                    'api_items': api_list
+                    'api_items': api_items
                 }
-                module_list.append(module_data)
+                module_items.append(module_data)
             project_data = {
                 'project_id': project.id,
-                'module_items': module_list
+                'module_items': module_items
             }
             payload.append(project_data)
 
@@ -457,7 +458,8 @@ class Test(db.Model):
         return data
 
 
-class TestConf(db.Model):
+class TestStep(db.Model):
+    __tablename__ = 'teststep'
     id = db.Column(db.Integer, primary_key=True)
     timestamp = db.Column(db.DateTime, index=True, default=datetime.now)
     api_id = db.Column(db.Integer, db.ForeignKey('api.id'))
@@ -468,7 +470,7 @@ class TestConf(db.Model):
     req_body = db.Column(db.Text())
 
     def __repr__(self):
-        return '<TestConf {}>'.format(self.id)
+        return '<TestStep {}>'.format(self.id)
 
     def from_dict(self, data):
         for field in ['req_params', 'req_headers', 'req_cookies', 'req_body']:
@@ -482,7 +484,7 @@ class TestConf(db.Model):
 
     def to_dict(self):
         data = {
-            'testconf_id': self.id,
+            'teststep_id': self.id,
             'api_id': self.api_id,
             'env_id': self.env_id,
             'timestamp': self.timestamp,
@@ -502,7 +504,7 @@ class Report(db.Model):
     detail = db.Column(db.Text)
     duration = db.Column(db.String(255))
     timestamp = db.Column(db.DateTime, index=True, default=datetime.now)
-    test_id = db.Column(db.Integer, db.ForeignKey('test.id'))
+    testcase_id = db.Column(db.Integer, db.ForeignKey('testcase.id'))
 
     def __repr__(self):
-        return '<Report {}>'.format(self.name)
+        return '<Report {}>'.format(self.report_name)

@@ -15,16 +15,16 @@ def before_request():
         return token_auth_error()
 
 
-@bp.route('/testOperate', methods=['POST'])
-def operate_test():
+@bp.route('/testCaseOperate', methods=['POST'])
+def operate_testcase():
     '''
     operate_type : '1' = 增，改  '2' = 查， '3' = 删, '4' = Run
     '''
     data = request.get_json() or {}
     project_id = data.get('project_id')
     api_id = data.get('api_id')
-    test_id = data.get('test_id')
-    test_name = data.get('name')
+    testcase_id = data.get('testcase_id')
+    testcase_name = data.get('name')
     operate_type = data.get('operate_type')
 
     if not operate_type:
@@ -42,35 +42,35 @@ def operate_test():
         if api not in project.apis.all():
             return bad_request('no api %s in project %s' % (api.name, project.project_name))
 
-        if not test_id:
-            if not test_name:
-                return bad_request('please input test name')
-            if Test.query.filter_by(name=test_name).first():
-                return bad_request('Test %s already exists' % test_name)
+        if not testcase_id:
+            if not testcase_name:
+                return bad_request('please input testcase name')
+            if TestCase.query.filter_by(name=testcase_name).first():
+                return bad_request('Testcase %s already exists' % testcase_name)
 
-            test = Test()
-            test.from_dict(data)
-            db.session.add(test)
+            testcase = TestCase()
+            testcase.from_dict(data)
+            db.session.add(testcase)
             session_commit()
-            data = test.to_dict()
-            response = trueReturn(data, 'create test success')
+            data = testcase.to_dict()
+            response = trueReturn(data, 'create testcase success')
             return response
 
-        if test_id:
-            test = Test.query.get_or_404(test_id)
-            if Project.query.get(test.project_id) not in g.current_user.followed_projects().all():
+        if testcase_id:
+            testcase = TestCase.query.get_or_404(testcase_id)
+            if Project.query.get(testcase.project_id) not in g.current_user.followed_projects().all():
                 return bad_request('you are not the member of project')
 
-            if test_name and test_name != test.name \
-                    and Test.query.filter_by(name=test_name).first():
-                return bad_request('please use a different test name or version')
+            if testcase_name and testcase_name != testcase.name \
+                    and TestCase.query.filter_by(name=testcase_name).first():
+                return bad_request('please use a different testcase name')
 
-            test.from_dict(data)
-            db.session.add(test)
+            testcase.from_dict(data)
+            db.session.add(testcase)
             session_commit()
 
-            data = test.to_dict()
-            response = trueReturn(data, 'update test success')
+            data = testcase.to_dict()
+            response = trueReturn(data, 'update testcase success')
             return response
 
     # 查
@@ -87,29 +87,29 @@ def operate_test():
            }]
         '''
 
-        if test_id:
-            test = Test.query.get_or_404(test_id)
-            return trueReturn(test.to_dict(), 'found it')
+        if testcase_id:
+            testcase = TestCase.query.get_or_404(testcase_id)
+            return trueReturn(testcase.to_dict(), 'found it')
 
         page_num = int(data.get('page_num'))
         per_page = int(data.get('per_page'))
-        payload = Test.to_collection_dict(page_num, per_page)
+        payload = TestCase.to_collection_dict(page_num, per_page)
         response = trueReturn(payload, 'list success')
         return response
 
     # 删
     if operate_type == '3':
-        if not test_id:
-            return bad_request('please input test_id')
-        for id in test_id:
-            test = Test.query.get_or_404(id)
-            if Project.query.get(test.project_id) not in g.current_user.followed_projects().all():
+        if not testcase_id:
+            return bad_request('please input testcase_id')
+        for id in testcase_id:
+            testcase = TestCase.query.get_or_404(id)
+            if Project.query.get(testcase.project_id) not in g.current_user.followed_projects().all():
                 return bad_request('cannot delete it as you are not the member of project')
-            db.session.delete(test)
+            db.session.delete(testcase)
 
         session_commit()
         data = {
-            'test_id': test_id
+            'testcase_id': testcase_id
         }
         response = trueReturn(data, 'delete success')
         return response

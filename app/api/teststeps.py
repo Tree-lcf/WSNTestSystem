@@ -14,14 +14,14 @@ def before_request():
         return token_auth_error()
 
 
-@bp.route('/testConfOperate', methods=['POST'])
-def operate_testconf():
+@bp.route('/testStepOperate', methods=['POST'])
+def operate_teststep():
     '''
     operate_type : '1' = 增，改  '2' = 查， '3' = 删
     '''
     data = request.get_json() or {}
     api_id = data.get('api_id')
-    testconf_id = data.get('testconf_id')
+    teststep_id = data.get('teststep_id')
     operate_type = data.get('operate_type')
 
     if not operate_type:
@@ -35,45 +35,45 @@ def operate_testconf():
 
     # 增，改
     if operate_type == '1':
-        if not testconf_id:
-            testconf = TestConf()
-            testconf.from_dict(data)
-            db.session.add(testconf)
+        if not teststep_id:
+            teststep = TestStep()
+            teststep.from_dict(data)
+            db.session.add(teststep)
             session_commit()
-            data = testconf.to_dict()
-            response = trueReturn(data, 'create testconf success')
+            data = teststep.to_dict()
+            response = trueReturn(data, 'create teststep success')
             return response
 
-        if testconf_id:
-            testconf = TestConf.query.get_or_404(testconf_id)
-            testconf.from_dict(data)
-            db.session.add(testconf)
+        if teststep_id:
+            teststep = TestStep.query.get_or_404(teststep_id)
+            teststep.from_dict(data)
+            db.session.add(teststep)
             session_commit()
 
-            data = testconf.to_dict()
-            response = trueReturn(data, 'update testconf success')
+            data = teststep.to_dict()
+            response = trueReturn(data, 'update teststep success')
             return response
 
     # 查
     if operate_type == '2':
-        if testconf_id:
-            testconf = TestConf.query.get_or_404(testconf_id)
-            return trueReturn(testconf.to_dict(), 'found it')
+        if teststep_id:
+            teststep = TestStep.query.get_or_404(teststep_id)
+            return trueReturn(teststep.to_dict(), 'found it')
         else:
-            return bad_request('must include testconf_id')
+            return bad_request('must include teststep_id')
 
     # 删
     if operate_type == '3':
-        if not testconf_id:
-            return bad_request('must include testconf_id')
+        if not teststep_id:
+            return bad_request('must include teststep_id')
 
-        testconf = TestConf.query.get_or_404(testconf_id)
+        teststep = TestStep.query.get_or_404(teststep_id)
 
-        db.session.delete(testconf)
+        db.session.delete(teststep)
 
         session_commit()
         data = {
-            'testconf_id': testconf_id
+            'teststep_id': teststep_id
         }
         response = trueReturn(data, 'delete success')
         return response
