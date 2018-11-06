@@ -107,6 +107,7 @@ def operate_testcase():
     if operate_type == '4':
         if not data:
             return bad_request('no data found to run test')
+
         name = data.get('name')
         env = Env.query.get_or_404(env_id)
 
@@ -117,30 +118,41 @@ def operate_testcase():
             },
             'variables': json.loads(env.env_var)  # [{"user_agent": "iOS/10.3"}, {"user_agent": "iOS/10.3"}]
         }
-
         teststeps = json.loads(data.get('teststeps'))
 
         payload = []
+
         for teststep in teststeps:
-            env = Env.query.get_or_404(teststep.env_id)
+            if teststep['step_id']:
+                step_id = int(teststep['step_id'])
+                teststep = TestStep.query.get_or_404(step_id)
+            else:
+                return bad_request('please add test steps')
+
             api = Api.query.get_or_404(teststep.api_id)
+
+            if teststep.env_id:
+                env = Env.query.get(teststep.env_id)
+            else:
+                env = None
 
             data = {
                 'name': teststep.name,
                 'req_method': api.req_method,
-                'req_temp_host': env.env_host,
+                'req_temp_host': env.env_host if env.env_host else '',
                 'req_relate_url': api.req_relate_url,
                 'req_data_type': api.req_data_type,
                 'req_headers': api.req_headers,   # '{"Content-Type": "application/json"}'
                 'req_cookies': api.req_cookies,  # '{"token": "application/json"}'
                 'req_params': api.req_params,  # '{"token": "application/json"}'
-                'req_body': api.req_body,   # '{"type": "ios"}'
-                'variables': env.env_var,  # [{"user_agent": "iOS/10.3"}, {"user_agent": "iOS/10.3"}]
-                'extracts': env.extracts,  # [{"user_agent": "iOS/10.3"}, {"user_agent": "iOS/10.3"}]
-                'asserts': env.asserts  # [{"user_agent": "iOS/10.3"}, {"user_agent": "iOS/10.3"}]
+                'req_body': teststep.req_body if teststep.req_body else api.req_body,   # '{"type": "ios"}'
+                'variables': env.env_var if env.env_var else '',  # [{"user_agent": "iOS/10.3"}, ]
+                'extracts': env.extracts if env.extracts else '',  # [{"user_agent": "iOS/10.3"}, {"user_agent": "iOS/10.3"}]
+                'asserts': env.asserts if env.asserts else ''  # [{'eq': ['status_code', 200]}]
              }
             payload.append(data)
-
+        print(payload)
+        print(config)
         tester = Runner(payload, config)
         report = tester.run()
         report = json.loads(report)

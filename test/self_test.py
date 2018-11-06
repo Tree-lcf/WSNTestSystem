@@ -118,10 +118,10 @@ class TestRestApiCase(unittest.TestCase):
             'operate_type': '1',
             'page_num': None,
             'per_page': None,
-            'env_host': '127.0.0.1',
-            'env_var': 'uuid = 123',
-            'extracts': '[1, 2]',
-            'asserts': '[True, False]',
+            'env_host': 'http://61.160.64.130:8081',
+            'env_var': '[{"type": "ios"}]',
+            'extracts': '[{"latest": "json.responseData.info.latest"}]',
+            'asserts': '[{"eq": ["json.retCode", "0"]}]',
             'test_id': None
         }
         self.envOperate_3 = {
@@ -226,10 +226,10 @@ class TestRestApiCase(unittest.TestCase):
             'env_id': 1,
             'teststep_id': 1,
             'name': 'teststep_1',
-            'req_headers': '{"Content-Type": "application/json"}',
+            'req_headers': '',
             'req_params': '',
-            'req_body': '{"type": "ios"}',
-            'req_cookies': '{"token": "12ww"}',
+            'req_body': '{"type": "$type"}',
+            'req_cookies': '',
             'operate_type': '1',
         }
 
@@ -840,15 +840,15 @@ class TestRestApiCase(unittest.TestCase):
         response = requests.post(self.moduleOperate_url, cookies=cookies, json=self.moduleOperate_1).json()
         response = AttrDict(response)
         module_id = response.data.module_id
-        self.apiOperate_1['project_id'] = project_id
-        self.apiOperate_1['module_id'] = module_id
-        response = requests.post(self.apiOperate_url, cookies=cookies, json=self.apiOperate_1).json()
+        self.apiOperate_5['project_id'] = project_id
+        self.apiOperate_5['module_id'] = module_id
+        self.apiOperate_5['operate_type'] = '1'
+
+        response = requests.post(self.apiOperate_url, cookies=cookies, json=self.apiOperate_5).json()
         response = AttrDict(response)
         self.assertTrue(response.status)
 
         api_id = response.data.api_id
-        print(api_id)
-        print(Api.query.get(api_id))
 
         self.envOperate_1_1['project_id'] = project_id
         response = requests.post(self.envOperate_url, cookies=cookies, json=self.envOperate_1_1).json()
@@ -856,10 +856,32 @@ class TestRestApiCase(unittest.TestCase):
 
         env_id = response.data.env_id
 
+        self.teststepOperate_1['api_id'] = api_id
+        self.teststepOperate_1['env_id'] = env_id
+        self.teststepOperate_1['teststep_id'] = ''
+
+        response = requests.post(self.testStepOperate_url, cookies=cookies, json=self.teststepOperate_1).json()
+        response = AttrDict(response)
+        print('----- add -----')
+        print(response)
+        self.assertTrue(response.status)
+        step_id = response.data.teststep_id
+        step_name = response.data.teststep_name
+
         self.testcaseOperate_1['project_id'] = project_id
         self.testcaseOperate_1['api_id'] = api_id
         self.testcaseOperate_1['env_id'] = env_id
         self.testcaseOperate_1['testcase_id'] = None
+        self.testcaseOperate_1['teststeps'] = '[{"step_id": %d, "step_name": "%s"}]' % (step_id, step_name)
+        self.testcaseOperate_1['operate_type'] = '4'
+
+        response = requests.post(self.testCaseOperate_url, cookies=cookies, json=self.testcaseOperate_1).json()
+        response = AttrDict(response)
+        print('----- run -----')
+        print(response)
+        self.assertTrue(response.status)
+
+        self.testcaseOperate_1['operate_type'] = '1'
 
         response = requests.post(self.testCaseOperate_url, cookies=cookies, json=self.testcaseOperate_1).json()
         response = AttrDict(response)
@@ -932,7 +954,7 @@ class TestRestApiCase(unittest.TestCase):
         module_id = response.data.module_id
         self.apiOperate_1['project_id'] = project_id
         self.apiOperate_1['module_id'] = module_id
-        response = requests.post(self.apiOperate_url, cookies=cookies, json=self.apiOperate_1).json()
+        response = requests.post(self.apiOperate_url, cookies=cookies, json=self.apiOperate_5).json()
         response = AttrDict(response)
         self.assertTrue(response.status)
 

@@ -42,6 +42,7 @@ class Runner:
 
     def run(self):
         payload = self.load_data()
+        print(payload)
         response = main_ate(payload)
         response = report_minify(response)
         response = json.dumps(response, cls=MyEncoder, indent=4)
