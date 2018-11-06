@@ -18,11 +18,12 @@ def before_request():
 @bp.route('/testCaseOperate', methods=['POST'])
 def operate_testcase():
     '''
-    operate_type : '1' = 增，改  '2' = 查， '3' = 删, '4' = Run
+    operate_type : '1' = 增，改  '2' = 查， '3' = 删, '4' = tryRun, '5' = batch_Run
     '''
     data = request.get_json() or {}
     project_id = data.get('project_id')
     api_id = data.get('api_id')
+    env_id = data.get('env_id')
     testcase_id = data.get('testcase_id')
     testcase_name = data.get('name')
     operate_type = data.get('operate_type')
@@ -103,11 +104,44 @@ def operate_testcase():
         return response
 
     # Run
-    if operate_type == '5':
+    if operate_type == '4':
         if not data:
             return bad_request('no data found to run test')
+        name = data.get('name')
+        env = Env.query.get_or_404(env_id)
 
-        tester = Runner([data])
+        config = {
+            'name': name,
+            'request': {
+                'base_url': env.env_host,
+            },
+            'variables': json.loads(env.env_var)  # [{"user_agent": "iOS/10.3"}, {"user_agent": "iOS/10.3"}]
+        }
+
+        teststeps = json.loads(data.get('teststeps'))
+
+        payload = []
+        for teststep in teststeps:
+            env = Env.query.get_or_404(teststep.env_id)
+            api = Api.query.get_or_404(teststep.api_id)
+
+            data = {
+                'name': teststep.name,
+                'req_method': api.req_method,
+                'req_temp_host': env.env_host,
+                'req_relate_url': api.req_relate_url,
+                'req_data_type': api.req_data_type,
+                'req_headers': api.req_headers,   # '{"Content-Type": "application/json"}'
+                'req_cookies': api.req_cookies,  # '{"token": "application/json"}'
+                'req_params': api.req_params,  # '{"token": "application/json"}'
+                'req_body': api.req_body,   # '{"type": "ios"}'
+                'variables': env.env_var,  # [{"user_agent": "iOS/10.3"}, {"user_agent": "iOS/10.3"}]
+                'extracts': env.extracts,  # [{"user_agent": "iOS/10.3"}, {"user_agent": "iOS/10.3"}]
+                'asserts': env.asserts  # [{"user_agent": "iOS/10.3"}, {"user_agent": "iOS/10.3"}]
+             }
+            payload.append(data)
+
+        tester = Runner(payload, config)
         report = tester.run()
         report = json.loads(report)
         return trueReturn(report, 'run success')

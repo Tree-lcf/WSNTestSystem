@@ -60,23 +60,28 @@ def extract_data(test_data):
     if test_data.req_headers:
         payload['request']['headers'] = json.loads(test_data.req_headers)
 
-        payload['request']['url'] = test_data.get('req_temp_host') + '/' + test_data.get('req_relate_url')
+    if test_data.req_cookies:
+        payload['request']['cookies'] = json.loads(test_data.req_cookies)
 
-        payload['request']['params'] = {param['key']: param['value'] for param in test_data.req_params if
-                                      param.get('key')}
+    payload['request']['url'] = test_data.get('req_temp_host') + '/' + test_data.get('req_relate_url')
+
+    if test_data.req_params:
+        payload['request']['params'] = json.loads(test_data.req_params)
 
     if test_data.get('req_data_type') == 'data':
-        payload['request']['data'] = {variable['key']: variable['value'] for variable in test_data.req_body if
-                                        variable.get('key')}
+        payload['request']['data'] = json.loads(test_data.req_body)
 
     if test_data.get('req_data_type') == 'json':
         payload['request']['json'] = json.loads(test_data.req_body)
 
-    payload['extract'] = [{extract['key']: extract['value']} for extract in test_data.extractors if
-                        extract.get('key')]
+    if test_data.extracts:
+        payload['extract'] = json.loads(test_data.extracts)
 
-    payload['validate'] = [{validate['comparator']: [validate['key'], validate['value']]} for validate in
-                             test_data.validators if validate.get('key')]
+    if test_data.asserts:
+        payload['validate'] = json.loads(test_data.asserts)
+
+    if test_data.variables:
+        payload['variables'] = json.loads(test_data.variables)
 
     return payload
 

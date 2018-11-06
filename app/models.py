@@ -285,6 +285,7 @@ class Api(db.Model):
     req_temp_host = db.Column(db.String(255))
     req_relate_url = db.Column(db.String(255))
     req_headers = db.Column(db.Text())
+    req_cookies = db.Column(db.Text())
     req_params = db.Column(db.Text())
     req_data_type = db.Column(db.String(255))
     req_body = db.Column(db.Text())
@@ -299,7 +300,7 @@ class Api(db.Model):
 
     def from_dict(self, data):
         for field in ['name', 'req_method', 'req_temp_host', 'req_relate_url',
-                      'req_headers', 'req_params', 'req_data_type', 'req_body']:
+                      'req_headers', 'req_cookies', 'req_params', 'req_data_type', 'req_body']:
             if field in data:
                 setattr(self, field, data[field])
 
@@ -319,6 +320,7 @@ class Api(db.Model):
             'req_temp_host': self.req_temp_host,
             'req_relate_url': self.req_relate_url,
             'req_headers': self.req_headers,
+            'req_cookies': self.req_cookies,
             'req_params': self.req_params,
             'req_data_type': self.req_data_type,
             'req_body': self.req_body,
