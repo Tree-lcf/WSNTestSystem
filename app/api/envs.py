@@ -99,7 +99,7 @@ def operate_env():
         if Project.query.get(env.project_id) not in g.current_user.followed_projects().all():
             return bad_request('you are not the member of project')
 
-        if env.tests.all():
+        if env.testcases.all() or env.teststeps.all():
             return bad_request('there are tests under this env, please delete those tests first')
 
         db.session.delete(env)

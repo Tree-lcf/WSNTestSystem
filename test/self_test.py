@@ -211,7 +211,7 @@ class TestRestApiCase(unittest.TestCase):
             'env_id': 1,
             'name': 'test_1',
             'test_desc': 'test_desc',
-            'teststeps': '[teststep, teststep]',
+            'teststeps': '[{teststep}, {teststep}]',
             'req_headers': '{"Content-Type": "application/json"}',
             'req_params': '',
             'req_body': '{"type": "ios"}',
@@ -223,6 +223,7 @@ class TestRestApiCase(unittest.TestCase):
             'api_id': 1,
             'env_id': 1,
             'teststep_id': 1,
+            'name': 'teststep_1',
             'req_headers': '{"Content-Type": "application/json"}',
             'req_params': '',
             'req_body': '{"type": "ios"}',
@@ -953,6 +954,7 @@ class TestRestApiCase(unittest.TestCase):
 
         teststep_id = response.data.teststep_id
         self.teststepOperate_1['teststep_id'] = teststep_id
+        self.teststepOperate_1['name'] = 'teststep_2'
 
         response = requests.post(self.testStepOperate_url, cookies=cookies, json=self.teststepOperate_1).json()
         response = AttrDict(response)

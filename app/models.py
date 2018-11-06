@@ -372,8 +372,8 @@ class TestCase(db.Model):
     api_id = db.Column(db.Integer, db.ForeignKey('api.id'))
     name = db.Column(db.String(255))
     test_desc = db.Column(db.String(255))
+    teststeps = db.Column(db.String(255))  # "[{'step_id': 1, 'step_name': 'aa'}, {'step_id': 2, 'step_name': 'bb'}]"
     env_id = db.Column(db.Integer, db.ForeignKey('env.id'))
-    teststeps = db.Column(db.Text())  # [teststep_id...]
     test_result = db.Column(db.String(255))
     timestamp = db.Column(db.DateTime, index=True, default=datetime.now)
     report = db.relationship('Report', backref='testcase', uselist=False)
@@ -398,6 +398,7 @@ class TestCase(db.Model):
     def to_dict(self):
         api = Api.query.get(self.api_id)
         env = Env.query.get(self.env_id)
+
         data = {
             'testcase_id': self.id,
             'name': self.name,
@@ -461,6 +462,7 @@ class TestCase(db.Model):
 class TestStep(db.Model):
     __tablename__ = 'teststep'
     id = db.Column(db.Integer, primary_key=True)
+    name = db.Column(db.String(255))
     timestamp = db.Column(db.DateTime, index=True, default=datetime.now)
     api_id = db.Column(db.Integer, db.ForeignKey('api.id'))
     env_id = db.Column(db.Integer, db.ForeignKey('env.id'))
@@ -470,10 +472,10 @@ class TestStep(db.Model):
     req_body = db.Column(db.Text())
 
     def __repr__(self):
-        return '<TestStep {}>'.format(self.id)
+        return '<TestStep {}>'.format(self.name)
 
     def from_dict(self, data):
-        for field in ['req_params', 'req_headers', 'req_cookies', 'req_body']:
+        for field in ['name', 'req_params', 'req_headers', 'req_cookies', 'req_body']:
             if field in data:
                 setattr(self, field, data[field])
 
@@ -485,6 +487,7 @@ class TestStep(db.Model):
     def to_dict(self):
         data = {
             'teststep_id': self.id,
+            'teststep_name': self.name,
             'api_id': self.api_id,
             'env_id': self.env_id,
             'timestamp': self.timestamp,

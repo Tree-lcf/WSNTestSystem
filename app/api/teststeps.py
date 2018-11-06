@@ -21,6 +21,7 @@ def operate_teststep():
     '''
     data = request.get_json() or {}
     api_id = data.get('api_id')
+    teststep_name = data.get('name')
     teststep_id = data.get('teststep_id')
     operate_type = data.get('operate_type')
 
@@ -36,16 +37,27 @@ def operate_teststep():
     # 增，改
     if operate_type == '1':
         if not teststep_id:
+            if not teststep_name:
+                return bad_request('please input teststep_name')
+            if TestStep.query.filter_by(name=teststep_name, api_id=api_id).first():
+                return bad_request('Teststep %s already exists' % teststep_name)
+
             teststep = TestStep()
             teststep.from_dict(data)
             db.session.add(teststep)
             session_commit()
+
             data = teststep.to_dict()
             response = trueReturn(data, 'create teststep success')
             return response
 
         if teststep_id:
             teststep = TestStep.query.get_or_404(teststep_id)
+
+            if teststep_name and teststep_name != teststep.name \
+                    and TestStep.query.filter_by(name=teststep_name).first():
+                return bad_request('please use a different teststep name')
+
             teststep.from_dict(data)
             db.session.add(teststep)
             session_commit()
@@ -60,12 +72,12 @@ def operate_teststep():
             teststep = TestStep.query.get_or_404(teststep_id)
             return trueReturn(teststep.to_dict(), 'found it')
         else:
-            return bad_request('must include teststep_id')
+            return bad_request('please select one teststep')
 
     # 删
     if operate_type == '3':
         if not teststep_id:
-            return bad_request('must include teststep_id')
+            return bad_request('please select one teststep at least')
 
         teststep = TestStep.query.get_or_404(teststep_id)
 

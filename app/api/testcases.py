@@ -75,18 +75,6 @@ def operate_testcase():
 
     # 查
     if operate_type == '2':
-        '''
-           [{
-           'project_id': project_id,
-           'module_list':[
-               {
-                   'module_id': module_id,
-                   'api_list': [{}]        
-                }
-           ]
-           }]
-        '''
-
         if testcase_id:
             testcase = TestCase.query.get_or_404(testcase_id)
             return trueReturn(testcase.to_dict(), 'found it')
