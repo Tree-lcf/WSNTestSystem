@@ -107,8 +107,7 @@ class TestRestApiCase(unittest.TestCase):
             'env_host': '127.0.0.1',
             'env_var': 'uuid = 123',
             'extracts': '[1, 2]',
-            'asserts': '[True, False]',
-            'test_id': None
+            'asserts': '[True, False]'
         }
         self.envOperate_1_1 = {
             'project_id': 'app',
@@ -119,10 +118,22 @@ class TestRestApiCase(unittest.TestCase):
             'page_num': None,
             'per_page': None,
             'env_host': 'http://61.160.64.130:8081',
-            'env_var': '[{"type": "ios"}]',
-            'extracts': '[{"latest": "json.responseData.info.latest"}]',
-            'asserts': '[{"eq": ["json.retCode", "0"]}]',
-            'test_id': None
+            'env_var': '[{"uuid": "24FB4CCC-75AD-49D5-9937-0402E3A6C8E0"},{"passWord": "Jfpt123456"}]',
+            'extracts': '[{"kaptcha": "json.responseData.kaptcha"}]',
+            'asserts': '[{"eq": ["json.retCode", "0"]}]'
+        }
+        self.envOperate_1_2 = {
+            'project_id': 'app',
+            'env_id': None,
+            'env_name': 'env_2-1',
+            'env_desc': '2',
+            'operate_type': '1',
+            'page_num': None,
+            'per_page': None,
+            'env_host': '',
+            'env_var': '',
+            'extracts': '[{"kaptcha": "json.responseData.sessionID"}]',
+            'asserts': '[{"eq": ["json.retCode", "0"]}]'
         }
         self.envOperate_3 = {
             'project_id': None,
@@ -132,7 +143,6 @@ class TestRestApiCase(unittest.TestCase):
             'operate_type': '3',
             'page_num': '1',
             'per_page': '20',
-            'test_id': None
         }
         self.envOperate_2 = {
             'project_id': None,
@@ -142,7 +152,6 @@ class TestRestApiCase(unittest.TestCase):
             'operate_type': '2',
             'page_num': None,
             'per_page': None,
-            'test_id': None
         }
         self.envOperate_4 = {
             'project_id': None,
@@ -152,7 +161,6 @@ class TestRestApiCase(unittest.TestCase):
             'operate_type': '4',
             'page_num': None,
             'per_page': None,
-            'test_id': None
         }
         self.apiOperate_1 = {
             'project_id': 1,
@@ -192,17 +200,37 @@ class TestRestApiCase(unittest.TestCase):
             'name': 'api_2',
             'api_id': 1,
             'req_method': 'POST',
-            'req_temp_host': 'http://61.160.64.130:8081',
-            'req_relate_url': 'msg/getVersionInfo',
+            'req_temp_host': '',
+            'req_relate_url': 'getKaptcha',
             'req_headers': '{"Content-Type": "application/json"}',
             'req_cookies': '',
             'req_params': '',
             'req_data_type': 'json',
-            'req_body': '{"type": "ios"}',
+            'req_body': '',
             'extracts': '',
             'asserts': '',
             'variables': '',
             'operate_type': '5',
+            'page_num': None,
+            'per_page': None
+        }
+        self.apiOperate_6 = {
+            'project_id': 1,
+            'module_id': 1,
+            'name': 'api_6',
+            'api_id': 1,
+            'req_method': 'POST',
+            'req_temp_host': '',
+            'req_relate_url': 'login',
+            'req_headers': '{"Content-Type": "application/json"}',
+            'req_cookies': '',
+            'req_params': '',
+            'req_data_type': 'json',
+            'req_body': '',
+            'extracts': '',
+            'asserts': '',
+            'variables': '',
+            'operate_type': '1',
             'page_num': None,
             'per_page': None
         }
@@ -214,9 +242,6 @@ class TestRestApiCase(unittest.TestCase):
             'name': 'test_1',
             'test_desc': 'test_desc',
             'teststeps': '[{teststep}, {teststep}]',
-            'req_headers': '{"Content-Type": "application/json"}',
-            'req_params': '',
-            'req_body': '{"type": "ios"}',
             'operate_type': '1',
             'page_num': 1,
             'per_page': 10
@@ -228,7 +253,20 @@ class TestRestApiCase(unittest.TestCase):
             'name': 'teststep_1',
             'req_headers': '',
             'req_params': '',
-            'req_body': '{"type": "$type"}',
+            'req_body': '{"uuid": "$uuid"}',
+            'req_cookies': '',
+            'operate_type': '1',
+        }
+        self.teststepOperate_2 = {
+            'api_id': 1,
+            'env_id': 1,
+            'teststep_id': 1,
+            'name': 'teststep_2',
+            'req_headers': '',
+            'req_params': '',
+            'req_body': '{"userName": "jsyh01","kaptcha": "$kaptcha",'
+                        '"uuid": "$uuid","type": "2","appVersion": "V1.3.1(IOS)",'
+                        '"passWord": "$passWord"}',
             'req_cookies': '',
             'operate_type': '1',
         }
@@ -848,31 +886,58 @@ class TestRestApiCase(unittest.TestCase):
         response = AttrDict(response)
         self.assertTrue(response.status)
 
-        api_id = response.data.api_id
+        api_id1 = response.data.api_id
+
+        self.apiOperate_6['project_id'] = project_id
+        self.apiOperate_6['module_id'] = module_id
+        self.apiOperate_6['operate_type'] = '1'
+
+        response = requests.post(self.apiOperate_url, cookies=cookies, json=self.apiOperate_6).json()
+        response = AttrDict(response)
+        self.assertTrue(response.status)
+
+        api_id2 = response.data.api_id
 
         self.envOperate_1_1['project_id'] = project_id
         response = requests.post(self.envOperate_url, cookies=cookies, json=self.envOperate_1_1).json()
         response = AttrDict(response)
+        env_id1 = response.data.env_id
 
-        env_id = response.data.env_id
+        self.envOperate_1_2['project_id'] = project_id
+        response = requests.post(self.envOperate_url, cookies=cookies, json=self.envOperate_1_2).json()
+        response = AttrDict(response)
+        env_id2 = response.data.env_id
 
-        self.teststepOperate_1['api_id'] = api_id
-        self.teststepOperate_1['env_id'] = env_id
+        self.teststepOperate_1['api_id'] = api_id1
+        self.teststepOperate_1['env_id'] = env_id1
         self.teststepOperate_1['teststep_id'] = ''
 
         response = requests.post(self.testStepOperate_url, cookies=cookies, json=self.teststepOperate_1).json()
         response = AttrDict(response)
-        print('----- add -----')
+        print('----- add -step1----')
         print(response)
         self.assertTrue(response.status)
-        step_id = response.data.teststep_id
-        step_name = response.data.teststep_name
+        step_id1 = response.data.teststep_id
+        step_name1 = response.data.teststep_name
+
+        self.teststepOperate_2['api_id'] = api_id2
+        self.teststepOperate_2['env_id'] = env_id2
+        self.teststepOperate_2['teststep_id'] = ''
+
+        response = requests.post(self.testStepOperate_url, cookies=cookies, json=self.teststepOperate_2).json()
+        response = AttrDict(response)
+        print('----- add -step2----')
+        print(response)
+        self.assertTrue(response.status)
+        step_id2 = response.data.teststep_id
+        step_name2 = response.data.teststep_name
 
         self.testcaseOperate_1['project_id'] = project_id
-        self.testcaseOperate_1['api_id'] = api_id
-        self.testcaseOperate_1['env_id'] = env_id
+        self.testcaseOperate_1['api_id'] = api_id1
+        self.testcaseOperate_1['env_id'] = env_id1
         self.testcaseOperate_1['testcase_id'] = None
-        self.testcaseOperate_1['teststeps'] = '[{"step_id": %d, "step_name": "%s"}]' % (step_id, step_name)
+        self.testcaseOperate_1['teststeps'] = '[{"step_id": %d, "step_name": "%s"},{"step_id": %d, "step_name": "%s"}]' \
+                                              % (step_id1, step_name1, step_id2, step_name2)
         self.testcaseOperate_1['operate_type'] = '4'
 
         response = requests.post(self.testCaseOperate_url, cookies=cookies, json=self.testcaseOperate_1).json()

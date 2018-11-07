@@ -142,17 +142,17 @@ def operate_testcase():
                 'req_temp_host': env.env_host if env.env_host else '',
                 'req_relate_url': api.req_relate_url,
                 'req_data_type': api.req_data_type,
-                'req_headers': api.req_headers,   # '{"Content-Type": "application/json"}'
-                'req_cookies': api.req_cookies,  # '{"token": "application/json"}'
-                'req_params': api.req_params,  # '{"token": "application/json"}'
+                'req_headers': teststep.req_headers if teststep.req_headers else api.req_headers,   # '{"Content-Type": "application/json"}'
+                'req_cookies': teststep.req_cookies if teststep.req_cookies else api.req_cookies,  # '{"token": "application/json"}'
+                'req_params': teststep.req_params if teststep.req_params else api.req_params,  # '{"token": "application/json"}'
                 'req_body': teststep.req_body if teststep.req_body else api.req_body,   # '{"type": "ios"}'
                 'variables': env.env_var if env.env_var else '',  # [{"user_agent": "iOS/10.3"}, ]
                 'extracts': env.extracts if env.extracts else '',  # [{"user_agent": "iOS/10.3"}, {"user_agent": "iOS/10.3"}]
                 'asserts': env.asserts if env.asserts else ''  # [{'eq': ['status_code', 200]}]
              }
             payload.append(data)
-        print(payload)
-        print(config)
+        # print(payload)
+        # print(config)
         tester = Runner(payload, config)
         report = tester.run()
         report = json.loads(report)
