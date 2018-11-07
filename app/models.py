@@ -376,9 +376,9 @@ class TestCase(db.Model):
     test_desc = db.Column(db.String(255))
     teststeps = db.Column(db.String(255))  # "[{'step_id': 1, 'step_name': 'aa'}, {'step_id': 2, 'step_name': 'bb'}]"
     env_id = db.Column(db.Integer, db.ForeignKey('env.id'))
-    test_result = db.Column(db.String(255))
     timestamp = db.Column(db.DateTime, index=True, default=datetime.now)
     report = db.relationship('Report', backref='testcase', uselist=False)
+    # report = db.Column(db.Text())
 
     def __repr__(self):
         return '<TestCase {}>'.format(self.name)
@@ -399,8 +399,6 @@ class TestCase(db.Model):
 
     def to_dict(self):
         api = Api.query.get(self.api_id)
-        env = Env.query.get(self.env_id)
-
         data = {
             'testcase_id': self.id,
             'name': self.name,
@@ -409,11 +407,7 @@ class TestCase(db.Model):
             'module_name': Module.query.get(Api.query.get(self.api_id).module_id).module_name,
             'api_name': api.name,
             'api_url': api.req_relate_url,
-            'env_name': env.env_name,
-            'env_host': env.env_host,
-            'env_var': env.env_var,
-            'extracts': env.extracts,
-            'asserts': env.asserts,
+            'env_id': self.env_id if self.env_id else '',
             'teststeps': self.teststeps,
             'timestamp': self.timestamp
         }
@@ -503,13 +497,29 @@ class TestStep(db.Model):
 
 class Report(db.Model):
     id = db.Column(db.Integer, primary_key=True)
-    report_name = db.Column(db.String(255))
-    is_success = db.Column(db.Boolean, default=False)
+    name = db.Column(db.String(255), default='undefined')
     summary = db.Column(db.Text)
-    detail = db.Column(db.Text)
-    duration = db.Column(db.String(255))
+    test_result = db.Column(db.Boolean)
     timestamp = db.Column(db.DateTime, index=True, default=datetime.now)
     testcase_id = db.Column(db.Integer, db.ForeignKey('testcase.id'))
 
     def __repr__(self):
         return '<Report {}>'.format(self.report_name)
+
+    def from_dict(self, data):
+        for field in ['summary', 'name', 'test_result']:
+            if field in data:
+                setattr(self, field, data[field])
+
+        self.testcase_id = data['testcase_id']
+
+    def to_dict(self):
+        data = {
+            'report_id': self.id,
+            'report_name': self.name,
+            'summary': self.summary,
+            'test_result': self.test_result,
+            'timestamp': self.timestamp,
+            'testcase_id': self.testcase_id
+        }
+        return data

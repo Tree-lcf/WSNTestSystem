@@ -135,6 +135,19 @@ class TestRestApiCase(unittest.TestCase):
             'extracts': '[{"kaptcha": "json.responseData.sessionID"}]',
             'asserts': '[{"eq": ["json.retCode", "0"]}]'
         }
+        self.envOperate_1_3 = {
+            'project_id': 'app',
+            'env_id': None,
+            'env_name': 'env_2-2',
+            'env_desc': '3',
+            'operate_type': '1',
+            'page_num': None,
+            'per_page': None,
+            'env_host': 'http://61.160.64.130:8081',
+            'env_var': '[{"type": "ios"}]',
+            'extracts': '[{"kaptcha": "json.responseData.info.latest"}]',
+            'asserts': '[{"eq": ["json.retCode", "0"]}]'
+        }
         self.envOperate_3 = {
             'project_id': None,
             'env_id': None,
@@ -207,6 +220,26 @@ class TestRestApiCase(unittest.TestCase):
             'req_params': '',
             'req_data_type': 'json',
             'req_body': '',
+            'extracts': '[]',
+            'asserts': '',
+            'variables': '',
+            'operate_type': '5',
+            'page_num': None,
+            'per_page': None
+        }
+        self.apiOperate_11 = {
+            'project_id': 1,
+            'module_id': 1,
+            'name': 'api_2',
+            'api_id': 1,
+            'req_method': 'POST',
+            'req_temp_host': 'http://61.160.64.130:8081',
+            'req_relate_url': 'getKaptcha',
+            'req_headers': '{"Content-Type": "application/json"}',
+            'req_cookies': '',
+            'req_params': '',
+            'req_data_type': 'json',
+            'req_body': '{"uuid": "24FB4CCC-75AD-49D5-9937-0402E3A6C8E0"}',
             'extracts': '',
             'asserts': '',
             'variables': '',
@@ -222,6 +255,26 @@ class TestRestApiCase(unittest.TestCase):
             'req_method': 'POST',
             'req_temp_host': '',
             'req_relate_url': 'login',
+            'req_headers': '{"Content-Type": "application/json"}',
+            'req_cookies': '',
+            'req_params': '',
+            'req_data_type': 'json',
+            'req_body': '',
+            'extracts': '',
+            'asserts': '',
+            'variables': '',
+            'operate_type': '1',
+            'page_num': None,
+            'per_page': None
+        }
+        self.apiOperate_7 = {
+            'project_id': 1,
+            'module_id': 1,
+            'name': 'api_7',
+            'api_id': 1,
+            'req_method': 'POST',
+            'req_temp_host': '',
+            'req_relate_url': 'msg/getVersionInfo',
             'req_headers': '{"Content-Type": "application/json"}',
             'req_cookies': '',
             'req_params': '',
@@ -270,6 +323,21 @@ class TestRestApiCase(unittest.TestCase):
             'req_cookies': '',
             'operate_type': '1',
         }
+        self.teststepOperate_3 = {
+            'api_id': 1,
+            'env_id': 1,
+            'teststep_id': 1,
+            'name': 'teststep_3',
+            'req_headers': '',
+            'req_params': '',
+            'req_body': '{"type": "$type"}',
+            'req_cookies': '',
+            'operate_type': '1',
+        }
+        self.testsBatchRun_1 = {
+            'project_id': 1,
+            'test_id_items': []
+        }
 
         host = 'http://127.0.0.1:5000'
         self.register_url = host + '/auth/register'
@@ -291,6 +359,7 @@ class TestRestApiCase(unittest.TestCase):
         self.apiOperate_url = host + '/api/apiOperate'
         self.testCaseOperate_url = host + '/api/testCaseOperate'
         self.testStepOperate_url = host + '/api/testStepOperate'
+        self.testsBatchRun_url = host + '/api/testsBatchRun'
 
     def tearDown(self):
         db.session.remove()
@@ -855,11 +924,11 @@ class TestRestApiCase(unittest.TestCase):
         print(response)
         self.assertTrue(response.status)
 
-        response = requests.post(self.apiOperate_url, cookies=cookies, json=self.apiOperate_5).json()
+        response = requests.post(self.apiOperate_url, cookies=cookies, json=self.apiOperate_11).json()
         response = AttrDict(response)
         print('----- Run -----')
         print(response)
-        self.assertTrue(response.status)
+        self.assertTrue(response.data.success)
 
     def test_operate_testcase_success(self):
         requests.post(self.register_url, json=self.reg_data)
@@ -935,7 +1004,7 @@ class TestRestApiCase(unittest.TestCase):
         self.testcaseOperate_1['project_id'] = project_id
         self.testcaseOperate_1['api_id'] = api_id1
         self.testcaseOperate_1['env_id'] = env_id1
-        self.testcaseOperate_1['testcase_id'] = None
+        self.testcaseOperate_1['testcase_id'] = ''
         self.testcaseOperate_1['teststeps'] = '[{"step_id": %d, "step_name": "%s"},{"step_id": %d, "step_name": "%s"}]' \
                                               % (step_id1, step_name1, step_id2, step_name2)
         self.testcaseOperate_1['operate_type'] = '4'
@@ -944,7 +1013,7 @@ class TestRestApiCase(unittest.TestCase):
         response = AttrDict(response)
         print('----- run -----')
         print(response)
-        self.assertTrue(response.status)
+        self.assertTrue(response.data.success)
 
         self.testcaseOperate_1['operate_type'] = '1'
 
@@ -954,8 +1023,8 @@ class TestRestApiCase(unittest.TestCase):
         print(response)
         self.assertTrue(response.status)
 
-        # test_id = response.data.project_items[0].module_items[0].api_items[0].test_items[0].test_id
         testcase_id = response.data.testcase_id
+
         self.testcaseOperate_1['testcase_id'] = testcase_id
         self.testcaseOperate_1['name'] = 'test_2'
 
@@ -1000,6 +1069,74 @@ class TestRestApiCase(unittest.TestCase):
         print(response)
         self.assertTrue(response.status)
 
+    def test_operate_testcase_batch_success(self):
+        requests.post(self.register_url, json=self.reg_data)
+        response = requests.post(self.login_url, json=self.login_data).json()
+        response = AttrDict(response)
+        cookies = {'token': response.data.token}
+        payload = {
+            'project_name': 'app',
+            'owner_name': '003'
+        }
+        response = requests.post(self.add_project_url, cookies=cookies, json=payload).json()
+        response = AttrDict(response)
+
+        project_id = response.data.project_id
+
+        response = requests.post(self.moduleOperate_url, cookies=cookies, json=self.moduleOperate_1).json()
+        response = AttrDict(response)
+        module_id = response.data.module_id
+
+        self.apiOperate_7['project_id'] = project_id
+        self.apiOperate_7['module_id'] = module_id
+        self.apiOperate_7['operate_type'] = '1'
+
+        response = requests.post(self.apiOperate_url, cookies=cookies, json=self.apiOperate_7).json()
+        response = AttrDict(response)
+        self.assertTrue(response.status)
+        api_id3 = response.data.api_id
+
+        self.envOperate_1_3['project_id'] = project_id
+        response = requests.post(self.envOperate_url, cookies=cookies, json=self.envOperate_1_3).json()
+        response = AttrDict(response)
+        env_id3 = response.data.env_id
+
+        self.teststepOperate_3['api_id'] = api_id3
+        self.teststepOperate_3['env_id'] = env_id3
+        self.teststepOperate_3['teststep_id'] = ''
+
+        response = requests.post(self.testStepOperate_url, cookies=cookies, json=self.teststepOperate_3).json()
+        response = AttrDict(response)
+        print('----- add step3----')
+        print(response)
+        self.assertTrue(response.status)
+        step_id3 = response.data.teststep_id
+        step_name3 = response.data.teststep_name
+
+        self.testcaseOperate_1['project_id'] = project_id
+        self.testcaseOperate_1['api_id'] = api_id3
+        self.testcaseOperate_1['env_id'] = ''
+        self.testcaseOperate_1['testcase_id'] = ''
+        self.testcaseOperate_1['teststeps'] = '[{"step_id": %d, "step_name": "%s"}]' % (step_id3, step_name3)
+        self.testcaseOperate_1['operate_type'] = '1'
+        self.testcaseOperate_1['name'] = 'getinfo'
+
+        response = requests.post(self.testCaseOperate_url, cookies=cookies, json=self.testcaseOperate_1).json()
+        response = AttrDict(response)
+        print('----- add 2-----')
+        print(response)
+        self.assertTrue(response.status)
+
+        testcase_id2 = response.data.testcase_id
+        self.testsBatchRun_1['project_id'] = project_id
+        self.testsBatchRun_1['test_id_items'] = [testcase_id2]
+
+        response = requests.post(self.testsBatchRun_url, cookies=cookies, json=self.testsBatchRun_1).json()
+        response = AttrDict(response)
+        print('----- batch run-----')
+        print(response)
+        self.assertTrue(response.data.success)
+
     def test_operate_teststep_success(self):
         requests.post(self.register_url, json=self.reg_data)
         response = requests.post(self.login_url, json=self.login_data).json()
@@ -1019,7 +1156,7 @@ class TestRestApiCase(unittest.TestCase):
         module_id = response.data.module_id
         self.apiOperate_1['project_id'] = project_id
         self.apiOperate_1['module_id'] = module_id
-        response = requests.post(self.apiOperate_url, cookies=cookies, json=self.apiOperate_5).json()
+        response = requests.post(self.apiOperate_url, cookies=cookies, json=self.apiOperate_1).json()
         response = AttrDict(response)
         self.assertTrue(response.status)
 

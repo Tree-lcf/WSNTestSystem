@@ -37,12 +37,10 @@ class Runner:
         else:
             self.base_payload['config'] = self.config
             self.base_payload['teststeps'] = [extract_data(test) for test in self.tests]
-
         return self.base_payload
 
     def run(self):
         payload = self.load_data()
-        print(payload)
         response = main_ate(payload)
         response = report_minify(response)
         response = json.dumps(response, cls=MyEncoder, indent=4)

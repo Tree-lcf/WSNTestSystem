@@ -158,3 +158,85 @@ def operate_testcase():
         report = json.loads(report)
         return trueReturn(report, 'run success')
 
+
+@bp.route('/testsBatchRun', methods=['POST'])
+def tests_batch_run():
+    data = request.get_json() or {}
+    project_id = data.get('project_id')
+    test_id_items = data.get('test_id_items')
+
+    if len(test_id_items) != 1 or not test_id_items[0]:
+        return bad_request('no testcase selected or not support to batch-run currently')
+
+    project = Project.query.get_or_404(project_id)
+    if project not in g.current_user.followed_projects().all():
+        return bad_request('you are not the member of project %s' % project.project_name)
+
+    for test_id in test_id_items:
+        test_id = int(test_id)
+        testcase = TestCase.query.get_or_404(test_id)
+        if testcase not in project.testcases.all():
+            return bad_request('no testcase id %d in project %s' % (test_id, project.project_name))
+
+        name = testcase.name
+
+        env = None
+        if testcase.env_id:
+            env = Env.query.get_or_404(testcase.env_id)
+
+        config = {
+            'name': name,
+            'request': {
+                'base_url': env.env_host if env else '',
+            },
+            'variables': json.loads(env.env_var) if env else []  # [{"user_agent": "iOS/10.3"}, {"user_agent": "iOS/10.3"}]
+        }
+        teststeps = json.loads(testcase.teststeps)
+
+        payload = []
+
+        for teststep in teststeps:
+            if teststep['step_id']:
+                step_id = int(teststep['step_id'])
+                teststep = TestStep.query.get_or_404(step_id)
+            else:
+                return bad_request('please add test steps')
+
+            api = Api.query.get_or_404(teststep.api_id)
+
+            if teststep.env_id:
+                env = Env.query.get(teststep.env_id)
+            else:
+                env = None
+
+            data = {
+                'name': teststep.name,
+                'req_method': api.req_method,
+                'req_temp_host': env.env_host if env.env_host else '',
+                'req_relate_url': api.req_relate_url,
+                'req_data_type': api.req_data_type,
+                'req_headers': teststep.req_headers if teststep.req_headers else api.req_headers,   # '{"Content-Type": "application/json"}'
+                'req_cookies': teststep.req_cookies if teststep.req_cookies else api.req_cookies,  # '{"token": "application/json"}'
+                'req_params': teststep.req_params if teststep.req_params else api.req_params,  # '{"token": "application/json"}'
+                'req_body': teststep.req_body if teststep.req_body else api.req_body,   # '{"type": "ios"}'
+                'variables': env.env_var if env.env_var else '[]',  # [{"user_agent": "iOS/10.3"}, ]
+                'extracts': env.extracts if env.extracts else '[]',  # [{"user_agent": "iOS/10.3"}, {"user_agent": "iOS/10.3"}]
+                'asserts': env.asserts if env.asserts else '[]'  # [{'eq': ['status_code', 200]}]
+             }
+            payload.append(data)
+        tester = Runner(payload, config)
+        result = tester.run()
+        result = json.loads(result)
+
+        data = {
+            'summary': result,
+            'test_result': result['data']['success'],
+            'testcase_id': test_id,
+            'name': name
+        }
+        report = Report()
+        report.from_dict(data)
+        db.session.add(report)
+        session_commit()
+        response = trueReturn(message='report generated, please check')
+        return response
