@@ -377,7 +377,7 @@ class TestCase(db.Model):
     teststeps = db.Column(db.String(255))  # "[{'step_id': 1, 'step_name': 'aa'}, {'step_id': 2, 'step_name': 'bb'}]"
     env_id = db.Column(db.Integer, db.ForeignKey('env.id'))
     timestamp = db.Column(db.DateTime, index=True, default=datetime.now)
-    report = db.relationship('Report', backref='testcase', uselist=False)
+    reports = db.relationship('Report', backref='testcase')
     # report = db.Column(db.Text())
 
     def __repr__(self):
@@ -399,6 +399,7 @@ class TestCase(db.Model):
 
     def to_dict(self):
         api = Api.query.get(self.api_id)
+        report = self.reports
         data = {
             'testcase_id': self.id,
             'name': self.name,
@@ -409,6 +410,7 @@ class TestCase(db.Model):
             'api_url': api.req_relate_url,
             'env_id': self.env_id if self.env_id else '',
             'teststeps': self.teststeps,
+            'report_id': report.id if report else None,
             'timestamp': self.timestamp
         }
         return data
@@ -507,11 +509,14 @@ class Report(db.Model):
         return '<Report {}>'.format(self.report_name)
 
     def from_dict(self, data):
-        for field in ['summary', 'name', 'test_result']:
+        for field in ['summary', 'test_result']:
             if field in data:
                 setattr(self, field, data[field])
 
         self.testcase_id = data['testcase_id']
+
+        if 'name' in data:
+            self.name = data['name'] + '--%s' % datetime.now()
 
     def to_dict(self):
         data = {

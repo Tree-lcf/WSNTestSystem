@@ -230,13 +230,14 @@ def tests_batch_run():
 
         data = {
             'summary': result,
-            'test_result': result['data']['success'],
+            'test_result': result['success'],
             'testcase_id': test_id,
             'name': name
         }
+
         report = Report()
         report.from_dict(data)
         db.session.add(report)
         session_commit()
-        response = trueReturn(message='report generated, please check')
+        response = trueReturn({'report_id': report.id}, 'report generated success, please check')
         return response

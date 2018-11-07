@@ -3,7 +3,7 @@ import unittest
 import requests
 import json
 from app import create_app, db
-from app.models import User, Project, Module, Env, Api, TestCase, TestStep
+from app.models import User, Project, Module, Env, Api, TestCase, TestStep, Report
 from config import Config
 from app.common import AttrDict
 
@@ -370,6 +370,7 @@ class TestRestApiCase(unittest.TestCase):
         apis = Api.query.all()
         testcases = TestCase.query.all()
         teststeps = TestStep.query.all()
+        reports = Report.query.all()
 
         for user in users:
             db.session.delete(user)
@@ -391,6 +392,9 @@ class TestRestApiCase(unittest.TestCase):
 
         for teststep in teststeps:
             db.session.delete(teststep)
+
+        for report in reports:
+            db.session.delete(report)
 
         db.session.commit()
 
@@ -1135,7 +1139,7 @@ class TestRestApiCase(unittest.TestCase):
         response = AttrDict(response)
         print('----- batch run-----')
         print(response)
-        self.assertTrue(response.data.success)
+        self.assertTrue(response.status)
 
     def test_operate_teststep_success(self):
         requests.post(self.register_url, json=self.reg_data)
