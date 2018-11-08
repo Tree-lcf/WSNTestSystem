@@ -1,12 +1,9 @@
-import json
-import threading
 from app.api import bp
-from flask import request, g
+from flask import request
 from app.models import *
 from app.auth.auth import verify_token, token_auth_error
 from app.errors import trueReturn, bad_request
 from app.common import session_commit, RunJob, Runner
-# from app.utils.http_run import Runner
 
 
 @bp.before_request
@@ -166,13 +163,14 @@ def tests_batch_run():
     project_id = data.get('project_id')
     test_id_items = data.get('test_id_items')
 
-    if len(test_id_items) != 1 or not test_id_items[0]:
-        return bad_request('no testcase selected or not support to batch-run currently')
+    if not len(test_id_items):
+        return bad_request('no testcases selected')
 
     project = Project.query.get_or_404(project_id)
     if project not in g.current_user.followed_projects().all():
         return bad_request('you are not the member of project %s' % project.project_name)
 
+    report_id_items = []
     for test_id in test_id_items:
         test_id = int(test_id)
         testcase = TestCase.query.get_or_404(test_id)
@@ -226,8 +224,20 @@ def tests_batch_run():
              }
             payload.append(data)
 
-        test = RunJob(payload, config, test_id, name)
-        report_id = test.job()
+        test = RunJob(payload, config)
+        result = test.job()
+
+        data = {
+            'summary': result,
+            'test_result': result['success'],
+            'testcase_id': test_id,
+            'name': name
+        }
+
+        report = Report()
+        report.from_dict(data)
+        db.session.add(report)
+        session_commit()
 
         # tester = Runner(payload, config)
         # result = tester.run()
@@ -244,5 +254,8 @@ def tests_batch_run():
         # report.from_dict(data)
         # db.session.add(report)
         # session_commit()
-        response = trueReturn({'report_id': report_id}, 'testcase %s done, please check report' % testcase.name)
-        return response
+
+        report_id_items.append(report.id)
+
+    response = trueReturn({'report_id_items': report_id_items}, 'tests run complete all, please check reports')
+    return response

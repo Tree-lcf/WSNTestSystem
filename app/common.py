@@ -1,7 +1,6 @@
 from httprunner import HttpRunner
 import threading
 from app.models import *
-from app.models import Report
 
 
 def main_ate(tests):
@@ -169,11 +168,9 @@ class MyThread(threading.Thread):
 
 
 class RunJob:
-    def __init__(self, payload, config, test_id, name):
+    def __init__(self, payload, config):
         self.payload = payload
         self.config = config
-        self.name = name
-        self.test_id = test_id
 
     def run(self):
 
@@ -181,18 +178,7 @@ class RunJob:
         result = tester.run()
         result = json.loads(result)
 
-        data = {
-            'summary': result,
-            'test_result': result['success'],
-            'testcase_id': self.test_id,
-            'name': self.name
-        }
-
-        report = Report()
-        report.from_dict(data)
-        db.session.add(report)
-        session_commit()
-        return report.id
+        return result
 
     def job(self):
         thread = MyThread(self.run, name=self.run.__name__)
