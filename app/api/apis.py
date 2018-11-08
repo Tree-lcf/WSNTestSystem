@@ -110,6 +110,10 @@ def operate_api():
            ]
            }]
         '''
+        if api_id:
+            api = Api.query.get_or_404(api_id)
+            return trueReturn(api.to_dict(), 'found it')
+
         page_num = int(data.get('page_num', 1))
         per_page = int(data.get('per_page', 10))
         payload = Api.to_collection_dict(page_num, per_page)
