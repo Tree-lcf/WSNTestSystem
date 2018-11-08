@@ -1,11 +1,12 @@
 import json
+import threading
 from app.api import bp
 from flask import request, g
 from app.models import *
 from app.auth.auth import verify_token, token_auth_error
 from app.errors import trueReturn, bad_request
-from app.common import session_commit
-from app.utils.http_run import Runner
+from app.common import session_commit, RunJob, Runner
+# from app.utils.http_run import Runner
 
 
 @bp.before_request
@@ -224,20 +225,24 @@ def tests_batch_run():
                 'asserts': env.asserts if env.asserts else '[]'  # [{'eq': ['status_code', 200]}]
              }
             payload.append(data)
-        tester = Runner(payload, config)
-        result = tester.run()
-        result = json.loads(result)
 
-        data = {
-            'summary': result,
-            'test_result': result['success'],
-            'testcase_id': test_id,
-            'name': name
-        }
+        test = RunJob(payload, config, test_id, name)
+        report_id = test.job()
 
-        report = Report()
-        report.from_dict(data)
-        db.session.add(report)
-        session_commit()
-        response = trueReturn({'report_id': report.id}, 'report generated success, please check')
+        # tester = Runner(payload, config)
+        # result = tester.run()
+        # result = json.loads(result)
+        #
+        # data = {
+        #     'summary': result,
+        #     'test_result': result['success'],
+        #     'testcase_id': test_id,
+        #     'name': name
+        # }
+        #
+        # report = Report()
+        # report.from_dict(data)
+        # db.session.add(report)
+        # session_commit()
+        response = trueReturn({'report_id': report_id}, 'testcase %s done, please check report' % testcase.name)
         return response
