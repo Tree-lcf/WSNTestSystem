@@ -1,5 +1,7 @@
 import base64
 import os
+import json
+import ast
 from app import db
 from datetime import datetime, timedelta
 from werkzeug.security import generate_password_hash, check_password_hash
@@ -377,8 +379,7 @@ class TestCase(db.Model):
     teststeps = db.Column(db.String(255))  # "[{'step_id': 1, 'step_name': 'aa'}, {'step_id': 2, 'step_name': 'bb'}]"
     env_id = db.Column(db.Integer, db.ForeignKey('env.id'))
     timestamp = db.Column(db.DateTime, index=True, default=datetime.now)
-    reports = db.relationship('Report', backref='testcase')
-    # report = db.Column(db.Text())
+    reports = db.relationship('Report', backref='testcase', lazy='dynamic')
 
     def __repr__(self):
         return '<TestCase {}>'.format(self.name)
@@ -399,7 +400,6 @@ class TestCase(db.Model):
 
     def to_dict(self):
         api = Api.query.get(self.api_id)
-        report = self.reports
         data = {
             'testcase_id': self.id,
             'name': self.name,
@@ -410,7 +410,7 @@ class TestCase(db.Model):
             'api_url': api.req_relate_url,
             'env_id': self.env_id if self.env_id else '',
             'teststeps': self.teststeps,
-            'report_id': report.id if report else None,
+            'has_report': True if self.reports.all() else False,
             'timestamp': self.timestamp
         }
         return data
@@ -455,6 +455,25 @@ class TestCase(db.Model):
             }
         }
         return data
+
+    def to_reports_dict(self, page_num, per_page):
+        reports = self.reports.paginate(page_num, per_page, False)
+        reports_items = reports.items
+        report_dicts = []
+        for report in reports_items:
+            report_dicts.append(report.to_dict())
+
+        payload = {
+            'testcase_id': self.id,
+            'report_dicts': report_dicts,
+            'meta': {
+                'has_next': reports.has_next,
+                'next_num': reports.next_num,
+                'has_prev': reports.has_prev,
+                'prev_num': reports.prev_num
+            }
+        }
+        return payload
 
 
 class TestStep(db.Model):
@@ -519,12 +538,15 @@ class Report(db.Model):
             self.name = data['name'] + '--%s' % datetime.now()
 
     def to_dict(self):
+        summary = ast.literal_eval(self.summary)
+
         data = {
             'report_id': self.id,
             'report_name': self.name,
-            'summary': self.summary,
+            'summary': summary,
             'test_result': self.test_result,
             'timestamp': self.timestamp,
             'testcase_id': self.testcase_id
         }
         return data
+

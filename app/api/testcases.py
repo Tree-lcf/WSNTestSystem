@@ -80,8 +80,8 @@ def operate_testcase():
             testcase = TestCase.query.get_or_404(testcase_id)
             return trueReturn(testcase.to_dict(), 'found it')
 
-        page_num = int(data.get('page_num'))
-        per_page = int(data.get('per_page'))
+        page_num = int(data.get('page_num', 1))
+        per_page = int(data.get('per_page', 10))
         payload = TestCase.to_collection_dict(page_num, per_page)
         response = trueReturn(payload, 'list success')
         return response

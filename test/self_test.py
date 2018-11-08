@@ -338,6 +338,13 @@ class TestRestApiCase(unittest.TestCase):
             'project_id': 1,
             'test_id_items': []
         }
+        self.report_1 = {
+            'testcase_id': 1,
+            'report_id': 1,  # int or list of int
+            'operate_type': '2',
+            'page_num': 1,
+            'per_page': 10
+        }
 
         host = 'http://127.0.0.1:5000'
         self.register_url = host + '/auth/register'
@@ -360,6 +367,7 @@ class TestRestApiCase(unittest.TestCase):
         self.testCaseOperate_url = host + '/api/testCaseOperate'
         self.testStepOperate_url = host + '/api/testStepOperate'
         self.testsBatchRun_url = host + '/api/testsBatchRun'
+        self.report_url = host + '/api/report'
 
     def tearDown(self):
         db.session.remove()
@@ -1138,6 +1146,30 @@ class TestRestApiCase(unittest.TestCase):
         response = requests.post(self.testsBatchRun_url, cookies=cookies, json=self.testsBatchRun_1).json()
         response = AttrDict(response)
         print('----- batch run-----')
+        print(response)
+        self.assertTrue(response.status)
+        report_id = response.data.report_id
+
+        self.report_1['report_id'] = None
+        self.report_1['testcase_id'] = testcase_id2
+        response = requests.post(self.report_url, cookies=cookies, json=self.report_1).json()
+        response = AttrDict(response)
+        print('----- report list-----')
+        print(response)
+        self.assertTrue(response.status)
+
+        self.report_1['report_id'] = report_id
+        response = requests.post(self.report_url, cookies=cookies, json=self.report_1).json()
+        response = AttrDict(response)
+        print('----- found-----')
+        print(response)
+        self.assertTrue(response.status)
+
+        self.report_1['report_id'] = [report_id]
+        self.report_1['operate_type'] = '3'
+        response = requests.post(self.report_url, cookies=cookies, json=self.report_1).json()
+        response = AttrDict(response)
+        print('----- del -----')
         print(response)
         self.assertTrue(response.status)
 
