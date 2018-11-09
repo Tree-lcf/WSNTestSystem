@@ -112,7 +112,7 @@ class Project(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     project_name = db.Column(db.String(255), index=True, unique=True, nullable=False)
     owner_name = db.Column(db.String(255), index=True, nullable=False)
-    timestamp = db.Column(db.DateTime, index=True, default=datetime.now)
+    timestamp = db.Column(db.DateTime, index=True, default=datetime.utcnow)
     modules = db.relationship('Module', backref='project', lazy='dynamic')
     envs = db.relationship('Env', backref='project', lazy='dynamic')
     apis = db.relationship('Api', backref='project', lazy='dynamic')
@@ -180,7 +180,7 @@ class Project(db.Model):
 class Module(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     module_name = db.Column(db.String(255), index=True)
-    timestamp = db.Column(db.DateTime, index=True, default=datetime.now)
+    timestamp = db.Column(db.DateTime, index=True, default=datetime.utcnow)
     project_id = db.Column(db.Integer, db.ForeignKey('project.id'))
     apis = db.relationship('Api', backref='module', lazy='dynamic')
 
@@ -214,7 +214,7 @@ class Env(db.Model):
     env_var = db.Column(db.Text())
     extracts = db.Column(db.Text())
     asserts = db.Column(db.Text())
-    timestamp = db.Column(db.DateTime, index=True, default=datetime.now)
+    timestamp = db.Column(db.DateTime, index=True, default=datetime.utcnow)
     project_id = db.Column(db.Integer, db.ForeignKey('project.id'))
     testcases = db.relationship('TestCase', backref='env', lazy='dynamic')
     teststeps = db.relationship('TestStep', backref='env', lazy='dynamic')
@@ -291,7 +291,7 @@ class Api(db.Model):
     req_params = db.Column(db.Text())
     req_data_type = db.Column(db.String(255))
     req_body = db.Column(db.Text())
-    timestamp = db.Column(db.DateTime, index=True, default=datetime.now)
+    timestamp = db.Column(db.DateTime, index=True, default=datetime.utcnow)
     module_id = db.Column(db.Integer, db.ForeignKey('module.id'))
     project_id = db.Column(db.Integer, db.ForeignKey('project.id'))
     testcases = db.relationship('TestCase', backref='api', lazy='dynamic')
@@ -378,7 +378,7 @@ class TestCase(db.Model):
     test_desc = db.Column(db.String(255))
     teststeps = db.Column(db.String(255))  # "[{'step_id': 1, 'step_name': 'aa'}, {'step_id': 2, 'step_name': 'bb'}]"
     env_id = db.Column(db.Integer, db.ForeignKey('env.id'))
-    timestamp = db.Column(db.DateTime, index=True, default=datetime.now)
+    timestamp = db.Column(db.DateTime, index=True, default=datetime.utcnow)
     reports = db.relationship('Report', backref='testcase', lazy='dynamic')
 
     def __repr__(self):
@@ -480,7 +480,7 @@ class TestStep(db.Model):
     __tablename__ = 'teststep'
     id = db.Column(db.Integer, primary_key=True)
     name = db.Column(db.String(255))
-    timestamp = db.Column(db.DateTime, index=True, default=datetime.now)
+    timestamp = db.Column(db.DateTime, index=True, default=datetime.utcnow)
     api_id = db.Column(db.Integer, db.ForeignKey('api.id'))
     env_id = db.Column(db.Integer, db.ForeignKey('env.id'))
     req_params = db.Column(db.Text())
@@ -521,7 +521,7 @@ class Report(db.Model):
     name = db.Column(db.String(255), default='undefined')
     summary = db.Column(db.Text)
     test_result = db.Column(db.Boolean)
-    timestamp = db.Column(db.DateTime, index=True, default=datetime.now)
+    timestamp = db.Column(db.DateTime, index=True, default=datetime.utcnow)
     testcase_id = db.Column(db.Integer, db.ForeignKey('testcase.id'))
 
     def __repr__(self):
@@ -535,7 +535,7 @@ class Report(db.Model):
         self.testcase_id = data['testcase_id']
 
         if 'name' in data:
-            self.name = data['name'] + '--%s' % datetime.now()
+            self.name = data['name'] + '--%s' % datetime.utcnow().strftime('%Y/%m/%d %H:%M:%S')
 
     def to_dict(self):
         summary = ast.literal_eval(self.summary)
@@ -545,7 +545,7 @@ class Report(db.Model):
             'report_name': self.name,
             'summary': summary,
             'test_result': self.test_result,
-            'timestamp': self.timestamp,
+            'timestamp': self.timestamp.strftime('%Y/%m/%d %H:%M:%S'),
             'testcase_id': self.testcase_id
         }
         return data
