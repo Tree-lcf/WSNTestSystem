@@ -1209,14 +1209,15 @@ class TestRestApiCase(unittest.TestCase):
         self.assertTrue(response.status)
         report_id_items = response.data.report_id_items
 
-        self.report_1['report_id'] = report_id_items[0]
         self.report_1['testcase_id'] = testcase_id2
+        self.report_1['report_id'] = None
         response = requests.post(self.report_url, cookies=cookies, json=self.report_1).json()
         response = AttrDict(response)
         print('----- report list-----')
         print(response)
         self.assertTrue(response.status)
 
+        self.report_1['testcase_id'] = testcase_id2
         self.report_1['report_id'] = report_id_items[0]
         response = requests.post(self.report_url, cookies=cookies, json=self.report_1).json()
         response = AttrDict(response)
