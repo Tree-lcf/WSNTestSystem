@@ -920,6 +920,7 @@ class TestRestApiCase(unittest.TestCase):
         self.assertTrue(response.status)
 
         self.apiOperate_1['operate_type'] = '3'
+        self.apiOperate_1['api_id'] = None
         response = requests.post(self.apiOperate_url, cookies=cookies, json=self.apiOperate_1).json()
         response = AttrDict(response)
         print('----- list -----')
