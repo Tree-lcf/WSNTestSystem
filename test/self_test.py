@@ -1028,6 +1028,7 @@ class TestRestApiCase(unittest.TestCase):
         response = requests.post(self.testStepOperate_url, cookies=cookies, json=self.teststepOperate_1).json()
         response = AttrDict(response)
         print('----- add -step1----')
+        print(self.teststepOperate_1)
         print(response)
         self.assertTrue(response.status)
         step_id1 = response.data.teststep_id
@@ -1268,6 +1269,7 @@ class TestRestApiCase(unittest.TestCase):
         response = requests.post(self.testsBatchRun_url, cookies=cookies, json=self.testsBatchRun_1).json()
         response = AttrDict(response)
         print('----- batch run-----')
+        print(self.testsBatchRun_1)
         print(response)
         self.assertTrue(response.status)
         report_id_items = response.data.report_id_items
@@ -1277,6 +1279,7 @@ class TestRestApiCase(unittest.TestCase):
         response = requests.post(self.report_url, cookies=cookies, json=self.report_1).json()
         response = AttrDict(response)
         print('----- report list-----')
+        print(self.report_1)
         print(response)
         self.assertTrue(response.status)
 
@@ -1285,6 +1288,7 @@ class TestRestApiCase(unittest.TestCase):
         response = requests.post(self.report_url, cookies=cookies, json=self.report_1).json()
         response = AttrDict(response)
         print('----- found-----')
+        print(self.report_1)
         print(response)
         self.assertTrue(response.status)
 
@@ -1293,6 +1297,7 @@ class TestRestApiCase(unittest.TestCase):
         response = requests.post(self.report_url, cookies=cookies, json=self.report_1).json()
         response = AttrDict(response)
         print('----- del -----')
+        print(self.report_1)
         print(response)
         self.assertTrue(response.status)
 
@@ -1334,6 +1339,7 @@ class TestRestApiCase(unittest.TestCase):
         response = requests.post(self.testStepOperate_url, cookies=cookies, json=self.teststepOperate_1).json()
         response = AttrDict(response)
         print('----- add -----')
+        print(self.teststepOperate_1)
         print(response)
         self.assertTrue(response.status)
 
@@ -1345,6 +1351,7 @@ class TestRestApiCase(unittest.TestCase):
         response = AttrDict(response)
         print('----- update -----')
         print(response)
+        print(self.teststepOperate_1)
         self.assertTrue(response.status)
 
         self.teststepOperate_1['operate_type'] = '2'
@@ -1352,6 +1359,7 @@ class TestRestApiCase(unittest.TestCase):
         response = requests.post(self.testStepOperate_url, cookies=cookies, json=self.teststepOperate_1).json()
         response = AttrDict(response)
         print('----- find -----')
+        print(self.teststepOperate_1)
         print(response)
         self.assertTrue(response.status)
 
@@ -1360,6 +1368,7 @@ class TestRestApiCase(unittest.TestCase):
         response = requests.post(self.testStepOperate_url, cookies=cookies, json=self.teststepOperate_1).json()
         response = AttrDict(response)
         print('----- delete -----')
+        print(self.teststepOperate_1)
         print(response)
         self.assertTrue(response.status)
 
