@@ -99,7 +99,7 @@ def operate_api():
                 return bad_request('you are not the member of project')
             return trueReturn(api.to_dict(), 'found it')
 
-        if not (project_id and module_id):
+        if not project_id and not module_id:
             page_num = int(data.get('page_num', 1))
             per_page = int(data.get('per_page', 10))
             payload = Api.to_collection_dict(page_num, per_page)

@@ -867,6 +867,12 @@ class TestRestApiCase(unittest.TestCase):
         print('----- add -----')
         print(response)
         self.assertTrue(response.status)
+        self.envOperate_3['env_id'] = response.data.env_id
+        response = requests.post(self.envOperate_url, cookies=cookies, json=self.envOperate_3).json()
+        response = AttrDict(response)
+        print('----- found -----')
+        print(response)
+        self.assertTrue(response.status)
         self.envOperate_2['env_id'] = response.data.env_id
         self.envOperate_4['env_id'] = response.data.env_id
         response = requests.post(self.envOperate_url, cookies=cookies, json=self.envOperate_2).json()
@@ -874,6 +880,7 @@ class TestRestApiCase(unittest.TestCase):
         print('----- update -----')
         print(response)
         self.assertTrue(response.status)
+        self.envOperate_3['env_id'] = None
         response = requests.post(self.envOperate_url, cookies=cookies, json=self.envOperate_3).json()
         response = AttrDict(response)
         print('----- list -----')
@@ -921,9 +928,38 @@ class TestRestApiCase(unittest.TestCase):
 
         self.apiOperate_1['operate_type'] = '3'
         self.apiOperate_1['api_id'] = None
+        self.apiOperate_1['module_id'] = None
+        self.apiOperate_1['project_id'] = None
         response = requests.post(self.apiOperate_url, cookies=cookies, json=self.apiOperate_1).json()
         response = AttrDict(response)
         print('----- list -----')
+        print(response)
+        self.assertTrue(response.status)
+
+        self.apiOperate_1['operate_type'] = '3'
+        self.apiOperate_1['api_id'] = api_id
+        response = requests.post(self.apiOperate_url, cookies=cookies, json=self.apiOperate_1).json()
+        response = AttrDict(response)
+        print('----- found -----')
+        print(response)
+        self.assertTrue(response.status)
+
+        self.apiOperate_1['operate_type'] = '3'
+        self.apiOperate_1['api_id'] = None
+        self.apiOperate_1['module_id'] = module_id
+        response = requests.post(self.apiOperate_url, cookies=cookies, json=self.apiOperate_1).json()
+        response = AttrDict(response)
+        print('----- list module api -----')
+        print(response)
+        self.assertTrue(response.status)
+
+        self.apiOperate_1['operate_type'] = '3'
+        self.apiOperate_1['api_id'] = None
+        self.apiOperate_1['project_id'] = project_id
+        self.apiOperate_1['module_id'] = None
+        response = requests.post(self.apiOperate_url, cookies=cookies, json=self.apiOperate_1).json()
+        response = AttrDict(response)
+        print('----- list project-module api -----')
         print(response)
         self.assertTrue(response.status)
 
@@ -1017,10 +1053,11 @@ class TestRestApiCase(unittest.TestCase):
                                               % (step_id1, step_name1, step_id2, step_name2)
         self.testcaseOperate_1['operate_type'] = '4'
 
+        print('----- run -----')
         response = requests.post(self.testCaseOperate_url, cookies=cookies, json=self.testcaseOperate_1).json()
         response = AttrDict(response)
-        print('----- run -----')
-        print(response)
+        print('input: %s' % self.testcaseOperate_1)
+        print('output: %s' % response)
         self.assertTrue(response.data.success)
 
         self.testcaseOperate_1['operate_type'] = '1'
@@ -1028,7 +1065,8 @@ class TestRestApiCase(unittest.TestCase):
         response = requests.post(self.testCaseOperate_url, cookies=cookies, json=self.testcaseOperate_1).json()
         response = AttrDict(response)
         print('----- add -----')
-        print(response)
+        print('input: %s' % self.testcaseOperate_1)
+        print('output: %s' % response)
         self.assertTrue(response.status)
 
         testcase_id = response.data.testcase_id
@@ -1039,7 +1077,8 @@ class TestRestApiCase(unittest.TestCase):
         response = requests.post(self.testCaseOperate_url, cookies=cookies, json=self.testcaseOperate_1).json()
         response = AttrDict(response)
         print('----- update -----')
-        print(response)
+        print('input: %s' % self.testcaseOperate_1)
+        print('output: %s' % response)
         self.assertTrue(response.status)
 
         self.testcaseOperate_1['operate_type'] = '2'
@@ -1047,7 +1086,8 @@ class TestRestApiCase(unittest.TestCase):
         response = requests.post(self.testCaseOperate_url, cookies=cookies, json=self.testcaseOperate_1).json()
         response = AttrDict(response)
         print('----- find -----')
-        print(response)
+        print('input: %s' % self.testcaseOperate_1)
+        print('output: %s' % response)
         self.assertTrue(response.status)
 
         self.testcaseOperate_1['operate_type'] = '3'
@@ -1056,7 +1096,8 @@ class TestRestApiCase(unittest.TestCase):
         response = requests.post(self.testCaseOperate_url, cookies=cookies, json=self.testcaseOperate_1).json()
         response = AttrDict(response)
         print('----- delete -----')
-        print(response)
+        print('input: %s' % self.testcaseOperate_1)
+        print('output: %s' % response)
         self.assertTrue(response.status)
 
         self.testcaseOperate_1['testcase_id'] = None
@@ -1066,15 +1107,37 @@ class TestRestApiCase(unittest.TestCase):
         response = requests.post(self.testCaseOperate_url, cookies=cookies, json=self.testcaseOperate_1).json()
         response = AttrDict(response)
         print('----- add -----')
-        print(response)
+        print('input: %s' % self.testcaseOperate_1)
+        print('output: %s' % response)
         self.assertTrue(response.status)
 
         self.testcaseOperate_1['operate_type'] = '2'
+        self.testcaseOperate_1['project_id'] = None
+        self.testcaseOperate_1['module_id'] = None
 
         response = requests.post(self.testCaseOperate_url, cookies=cookies, json=self.testcaseOperate_1).json()
         response = AttrDict(response)
         print('----- list -----')
-        print(response)
+        print('input: %s' % self.testcaseOperate_1)
+        print('output: %s' % response)
+        self.assertTrue(response.status)
+
+        self.testcaseOperate_1['operate_type'] = '2'
+        self.testcaseOperate_1['project_id'] = project_id
+        response = requests.post(self.testCaseOperate_url, cookies=cookies, json=self.testcaseOperate_1).json()
+        response = AttrDict(response)
+        print('----- list project case -----')
+        print('input: %s' % self.testcaseOperate_1)
+        print('output: %s' % response)
+        self.assertTrue(response.status)
+
+        self.testcaseOperate_1['operate_type'] = '2'
+        self.testcaseOperate_1['module_id'] = module_id
+        response = requests.post(self.testCaseOperate_url, cookies=cookies, json=self.testcaseOperate_1).json()
+        response = AttrDict(response)
+        print('----- list module case -----')
+        print('input: %s' % self.testcaseOperate_1)
+        print('output: %s' % response)
         self.assertTrue(response.status)
 
     def test_operate_testcase_batch_success(self):

@@ -81,7 +81,7 @@ def operate_testcase():
                 return bad_request('you are not the member of project')
             return trueReturn(testcase.to_dict(), 'found it')
 
-        if not (project_id and module_id):
+        if not project_id and not module_id:
             page_num = int(data.get('page_num', 1))
             per_page = int(data.get('per_page', 10))
             payload = TestCase.to_collection_dict(page_num, per_page)
