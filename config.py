@@ -15,3 +15,5 @@ class Config(object):
     SQLALCHEMY_DATABASE_URI = os.environ.get('DATABASE_URL') or \
                               'mysql://%s:%s@%s/%s' % (db_username, db_password, db_host, db_lib)
     SQLALCHEMY_TRACK_MODIFICATIONS = False
+
+    LOG_TO_STDOUT = os.environ.get('LOG_TO_STDOUT') or 0
