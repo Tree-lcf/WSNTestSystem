@@ -14,8 +14,8 @@ def before_request():
 
 @bp.route('/users', methods=['GET'])
 def get_users():
-    page_num = request.args.get('page_num', 1, type=int)
-    per_page = request.args.get('per_page', 10, type=int)
-    users = User.to_collection_dict(page_num, per_page)
+    # page_num = request.args.get('page_num', 1, type=int)
+    # per_page = request.args.get('per_page', 10, type=int)
+    users = User.to_collection_dict()
     response = trueReturn(users, 'success')
     return response

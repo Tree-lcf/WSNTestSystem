@@ -57,7 +57,7 @@ def create_project():
 @bp.route('/projectUpdate', methods=['POST'])
 def update_project():
     data = request.get_json() or {}
-    origin_project_name = data.get('origin_project_name')
+    origin_project_id = data.get('origin_project_id')
     origin_owner_name = data.get('origin_owner_name')
     new_owner_name = data.get('owner_name')
     new_project_name = data.get('project_name')
@@ -65,19 +65,19 @@ def update_project():
     origin_user = User.query.filter_by(username=origin_owner_name).first()
     if not origin_user:
         return bad_request('owner does not exist')
-    origin_project = Project.query.filter_by(project_name=origin_project_name).first()
+    origin_project = Project.query.filter_by(id=origin_project_id).first()
     if not origin_project:
-        return bad_request('original project %s does not exist' % origin_project_name)
+        return bad_request('original project %s does not exist' % origin_project_id)
 
     # print(g.current_user)
     # print(origin_user)
     if origin_user != g.current_user:
-        return bad_request('you are not the owner of %s project, cannot update it' % origin_project_name)
+        return bad_request('you are not the owner of %s project, cannot update it' % origin_project.project_name)
 
     if new_owner_name and new_owner_name != origin_owner_name and \
             not User.query.filter_by(username=new_owner_name).first():
         return bad_request('user %s not registers yet' % new_owner_name)
-    if new_project_name and new_project_name != origin_project_name and \
+    if new_project_name and new_project_name != origin_project.project_name and \
             Project.query.filter_by(project_name=new_project_name).first():
         return bad_request('please use a different project name')
 
@@ -113,12 +113,13 @@ def get_project_info():
 @bp.route('/projectDel', methods=['POST'])
 def delete_project():
     data = request.get_json() or {}
-    project_name = data.get('project_name')
-    if not project_name:
-        return bad_request('must include project name')
+    project_id = data.get('project_id')
+    if not project_id:
+        return bad_request('must include project id')
 
     # project = g.current_user.projects.filter_by(project_name=project_name).first()
-    project = Project.query.filter_by(project_name=project_name).first()
+    project = Project.query.filter_by(id=project_id).first()
+    project_name = project.project_name
 
     if not project:
         return bad_request('%s project does not exist' % project_name)
@@ -149,15 +150,15 @@ def delete_project():
 @bp.route('/projectLinkUser', methods=['POST'])
 def project_link_user():
     data = request.get_json() or {}
-    project_name = data.get('project_name')
+    project_id = data.get('project_id')
     username_list = data.get('username_list')
     follow_type = data.get('follow_type')  # follow = 1, unfollow = 2
 
     if not follow_type or follow_type not in ['1', '2']:
         return bad_request('follow_type error')
-    if not project_name:
-        return bad_request('must include project name')
-    project = Project.query.filter_by(project_name=project_name).first()
+    if not project_id:
+        return bad_request('must include project id')
+    project = Project.query.filter_by(id=project_id).first()
     if not project:
         return bad_request('project does not exist')
 
@@ -170,14 +171,14 @@ def project_link_user():
 
         if follow_type == '1':
             if user in project.users.all():
-                return bad_request('user %s is already in project %s' % (username, project_name))
+                return bad_request('user %s is already in project %s' % (username, project.project_name))
             if user.username == project.owner_name:
                 return bad_request('user %s is the owner of this project，not need to add' % username)
             project.follow(user)
 
         if follow_type == '2':
             if user not in project.users.all():
-                return bad_request('user %s is not in project %s' % (username, project_name))
+                return bad_request('user %s is not in project %s' % (username, project.project_name))
             if user.username == project.owner_name:
                 return bad_request('user %s is the owner of this project，cannot remove it' % username)
             project.unfollow(user)
@@ -186,10 +187,10 @@ def project_link_user():
     data = project.to_dict()
 
     if follow_type == '1':
-        response = trueReturn(data, 'add users into project %s success' % project_name)
+        response = trueReturn(data, 'add users into project %s success' % project.project_name)
         return response
 
     if follow_type == '2':
-        response = trueReturn(data, 'remove users from project %s success' % project_name)
+        response = trueReturn(data, 'remove users from project %s success' % project.project_name)
         return response
 

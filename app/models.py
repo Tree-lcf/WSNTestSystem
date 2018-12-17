@@ -94,17 +94,21 @@ class User(db.Model):
         return followed.union(own).order_by(Project.timestamp.desc())
 
     @staticmethod
-    def to_collection_dict(page_num, per_page):
-        users = User.query.paginate(page_num, per_page, False)
+    def to_collection_dict():
+        # users = User.query.paginate(page_num, per_page, False)
+        users = User.query.all()
         data = {
-            'users': [user.to_dict() for user in users.items],
-            'meta': {
-                'has_next': users.has_next,
-                'next_num': users.next_num,
-                'has_prev': users.has_prev,
-                'prev_num': users.prev_num
-            }
+            'users': [user.to_dict() for user in users]
         }
+        # data = {
+        #     'users': [user.to_dict() for user in users.items],
+        #     'meta': {
+        #         'has_next': users.has_next,
+        #         'next_num': users.next_num,
+        #         'has_prev': users.has_prev,
+        #         'prev_num': users.prev_num
+        #     }
+        # }
         return data
 
 

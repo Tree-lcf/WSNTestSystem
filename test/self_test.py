@@ -744,11 +744,13 @@ class TestRestApiCase(unittest.TestCase):
             'project_name': 'app',
             'owner_name': '003'
         }
-        requests.post(self.add_project_url, cookies=cookies, json=payload)
+        response = requests.post(self.add_project_url, cookies=cookies, json=payload).json()
+        response = AttrDict(response)
+        origin_project_id = response.data.project_id
         payload = {
             'project_name': 'cpp',
             'owner_name': '007',
-            'origin_project_name': 'app',
+            'origin_project_id': origin_project_id,
             'origin_owner_name': '003'
         }
         response = requests.post(self.update_project_url, cookies=cookies, json=payload).json()
@@ -784,8 +786,8 @@ class TestRestApiCase(unittest.TestCase):
         response = requests.post(self.login_url, json=self.login_data).json()
         response = AttrDict(response)
         cookies = {'token': response.data.token}
-        payload = {'page_num': '1', 'per_page': '20'}
-        response = requests.get(self.get_users_url, cookies=cookies, params=payload).json()
+        # payload = {'page_num': '1', 'per_page': '20'}
+        response = requests.get(self.get_users_url, cookies=cookies).json()
         response = AttrDict(response)
         print(response)
         self.assertTrue(response.status)
