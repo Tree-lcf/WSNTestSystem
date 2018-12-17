@@ -150,7 +150,7 @@ class Project(db.Model):
             },
             'users': {
                 'count': self.users.count(),
-                'list': [user.username for user in self.users.order_by(User.username).all()]
+                'list': [int(user.id) for user in self.users.order_by(User.id).all()]
             }
         }
         return data

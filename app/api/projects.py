@@ -151,7 +151,7 @@ def delete_project():
 def project_link_user():
     data = request.get_json() or {}
     project_id = data.get('project_id')
-    username_list = data.get('username_list')
+    user_id_list = data.get('user_id_list')
     follow_type = data.get('follow_type')  # follow = 1, unfollow = 2
 
     if not follow_type or follow_type not in ['1', '2']:
@@ -162,25 +162,25 @@ def project_link_user():
     if not project:
         return bad_request('project does not exist')
 
-    for username in username_list:
+    for user_id in user_id_list:
         # print(username)
         # type(username)
-        user = User.query.filter_by(username=username).first()
+        user = User.query.filter_by(id=user_id).first()
         if not user:
-            return bad_request('user %s does not exist' % username)
+            return bad_request('user %s does not exist' % user_id)
 
         if follow_type == '1':
             if user in project.users.all():
-                return bad_request('user %s is already in project %s' % (username, project.project_name))
+                return bad_request('user %s is already in project %s' % (user.username, project.project_name))
             if user.username == project.owner_name:
-                return bad_request('user %s is the owner of this project，not need to add' % username)
+                return bad_request('user %s is the owner of this project，not need to add' % user.username)
             project.follow(user)
 
         if follow_type == '2':
             if user not in project.users.all():
-                return bad_request('user %s is not in project %s' % (username, project.project_name))
+                return bad_request('user %s is not in project %s' % (user.username, project.project_name))
             if user.username == project.owner_name:
-                return bad_request('user %s is the owner of this project，cannot remove it' % username)
+                return bad_request('user %s is the owner of this project，cannot remove it' % user.username)
             project.unfollow(user)
 
     session_commit()

@@ -508,13 +508,16 @@ class TestRestApiCase(unittest.TestCase):
             'project_name': 'app',
             'owner_name': '003'
         }
-        requests.post(self.add_project_url, cookies=cookies, json=payload)
+        response = requests.post(self.add_project_url, cookies=cookies, json=payload).json()
+        response = AttrDict(response)
+        project_id = response.data.project_id
         requests.post(self.register_url, json=self.reg_data_copy)
         payload = {
-            'project_name': 'app',
+            'project_id': project_id,
             'username_list': ['007'],
             'follow_type': '1'
         }
+
         response = requests.post(self.project_has_user_url, cookies=cookies, json=payload).json()
         response = AttrDict(response)
         print(response)
@@ -619,17 +622,19 @@ class TestRestApiCase(unittest.TestCase):
             'project_name': 'app',
             'owner_name': '003'
         }
-        requests.post(self.add_project_url, cookies=cookies, json=payload)
+        response = requests.post(self.add_project_url, cookies=cookies, json=payload).json()
+        response = AttrDict(response)
+        project_id = response.data.project_id
         requests.post(self.register_url, json=self.reg_data_copy)
         payload = {
-            'project_name': 'app',
+            'project_id': project_id,
             'username_list': ['007'],
             'follow_type': '1'
         }
         response = requests.post(self.project_has_user_url, cookies=cookies, json=payload).json()
         print(response)
         payload = {
-            'project_name': 'app',
+            'project_id': project_id,
             'username_list': ['007'],
             'follow_type': '2'
         }
@@ -710,8 +715,10 @@ class TestRestApiCase(unittest.TestCase):
             'project_name': 'app',
             'owner_name': '003'
         }
-        requests.post(self.add_project_url, cookies=cookies, json=payload)
-        payload = {'project_name': 'app'}
+        response = requests.post(self.add_project_url, cookies=cookies, json=payload).json()
+        response = AttrDict(response)
+        project_id = response.data.project_id
+        payload = {'project_id': project_id}
         response = requests.post(self.del_project_url, cookies=cookies, json=payload).json()
         response = AttrDict(response)
         print(response)
