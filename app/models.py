@@ -6,6 +6,7 @@ from app import db
 from datetime import datetime, timedelta
 from werkzeug.security import generate_password_hash, check_password_hash
 from flask import g
+from app.common import to_obj, to_obj_2
 
 
 # class FromAPIMixin(object):
@@ -139,6 +140,16 @@ class Project(db.Model):
             module_dict = {'name': module.module_name}
             module_list.append(module_dict)
 
+        env_list = []
+        for env in self.envs.order_by(Env.timestamp.desc()).all():
+            env_obj = {
+                'env_id': env.id,
+                'env_name': env.env_name,
+                'env_desc': env.env_desc,
+                'env_host': env.env_host
+            }
+            env_list.append(env_obj)
+
         data = {
             'project_id': self.id,
             'project_name': self.project_name,
@@ -152,7 +163,7 @@ class Project(db.Model):
             'testcases_count': self.testcases.count(),
             'envs': {
                 'count': self.envs.count(),
-                'list': [env.id for env in self.envs.order_by(Env.timestamp.desc()).all()]
+                'list': env_list
             },
             'users': {
                 'count': self.users.count(),
@@ -233,23 +244,47 @@ class Env(db.Model):
         return '<Env {}>'.format(self.env_name)
 
     def from_dict(self, data):
-        for field in ['env_name', 'env_desc', 'env_host', 'env_var', 'extracts', 'asserts']:
+        for field in ['env_name', 'env_desc', 'env_host']:
             if field in data:
                 setattr(self, field, data[field])
+
+        for field in ['env_var', 'extracts']:
+            if field in data:
+                payload = []
+                for obj in data[field]:
+                    obj_t = {obj['key']: obj['value']}
+                    payload.append(obj_t)
+
+                payload_tostr = json.dumps(payload)
+                setattr(self, field, payload_tostr)
+
+        if 'asserts' in data:
+            payload = []
+            for obj in data['asserts']:
+                obj_t = {obj['eq']: [obj['actual'], obj['expect']]}
+                payload.append(obj_t)
+
+            payload_tostr = json.dumps(payload)
+            setattr(self, 'asserts', payload_tostr)
 
         if data['project_id']:
             self.project_id = data['project_id']
 
     def to_dict(self):
+
+        env_var = to_obj(self.env_var)
+        extracts = to_obj(self.extracts)
+        asserts = to_obj_2(self.asserts)
+
         data = {
             'env_id': self.id,
             'env_name': self.env_name,
             'project_id': self.project_id,
             'env_desc': self.env_desc,
             'env_host': self.env_host,
-            'env_var': self.env_var,
-            'extracts': self.extracts,
-            'asserts': self.asserts,
+            'env_var': env_var,
+            'extracts': extracts,
+            'asserts': asserts,
             'timestamp': self.timestamp,
             'testcases': {
                 'count': self.testcases.count(),

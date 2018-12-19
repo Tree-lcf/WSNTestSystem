@@ -186,3 +186,28 @@ class RunJob:
         thread.join()
         return thread.get_result()
 
+
+def to_obj(data):
+    payload = []
+    for obj in json.loads(data):
+        for item, value in obj.items():
+            obj_t = {
+                'key': item,
+                'value': value
+            }
+            payload.append(obj_t)
+    return payload
+
+
+def to_obj_2(data):
+    payload = []
+    for obj in json.loads(data):
+        for item, value in obj.items():
+            obj_t = {
+                'eq': item,
+                'actual': value[0],
+                'expect': value[1]
+            }
+            payload.append(obj_t)
+    return payload
+

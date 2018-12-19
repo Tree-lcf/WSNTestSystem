@@ -48,6 +48,7 @@ def operate_env():
 
     # 改
     if operate_type == '2':
+        print(data)
         if project_id:
             project = Project.query.get_or_404(project_id)
             if project not in g.current_user.followed_projects().all():
