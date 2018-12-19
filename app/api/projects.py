@@ -96,14 +96,14 @@ def update_project():
 
 @bp.route('/projectInfo', methods=['GET'])
 def get_project_info():
-    project_name = request.args.get('project_name', type=str)
-    if not project_name:
-        return bad_request('must include project name')
+    project_id = request.args.get('project_id', type=int)
+    if not project_id:
+        return bad_request('must include project id')
 
-    project = g.current_user.followed_projects().filter_by(project_name=project_name).first()
+    project = g.current_user.followed_projects().filter_by(id=project_id).first()
 
     if not project:
-        return bad_request('%s is not the member of %s' % (g.current_user.username, project_name))
+        return bad_request('%s is not the member of project %d' % (g.current_user.username, project_id))
 
     data = project.to_dict()
     response = trueReturn(data, 'Success')

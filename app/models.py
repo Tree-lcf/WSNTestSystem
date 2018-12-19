@@ -134,6 +134,11 @@ class Project(db.Model):
                 setattr(self, field, data[field])
 
     def to_dict(self):
+        module_list = []
+        for module in self.modules.order_by(Module.timestamp.desc()).all():
+            module_dict = {'name': module.module_name}
+            module_list.append(module_dict)
+
         data = {
             'project_id': self.id,
             'project_name': self.project_name,
@@ -141,7 +146,8 @@ class Project(db.Model):
             'timestamp': self.timestamp,
             'modules': {
                 'count': self.modules.count(),
-                'list': [module.module_name for module in self.modules.order_by(Module.timestamp.desc()).all()]
+                'list': module_list
+                # 'list': [module.module_name for module in self.modules.order_by(Module.timestamp.desc()).all()]
             },
             'testcases_count': self.testcases.count(),
             'envs': {

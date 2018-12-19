@@ -12,13 +12,24 @@ def before_request():
     if not verify_token(token):
         return token_auth_error()
 
+#
+# @bp.route('/moduleOperate', methods=['POST'])
+# def operate_module():
+#     data = request.get_json() or {}
+#     project_id = data.get('project_id')
+#     module_name_list = data.get('module_name_list')
+#     if not project_name:
+#         return bad_request('must include project name')
+#
+#
 
 @bp.route('/moduleOperate', methods=['POST'])
 def operate_module():
     data = request.get_json() or {}
     project_name = data.get('project_name')
     module_name = data.get('module_name')
-    origin_name = data.get('origin_name')
+    origin_module_list = data.get('origin_module_list')
+    origin_module_name = data.get('origin_module_name')
     operate_type = data.get('operate_type')
 
     if not project_name:
@@ -52,12 +63,14 @@ def operate_module():
 
     # 改
     if operate_type == '2':
-        module = Module.query.filter_by(module_name=origin_name).first_or_404()
+        if not origin_module_name:
+            return bad_request('please select module name')
+        module = Module.query.filter_by(module_name=origin_module_name).first_or_404()
 
         if not module_name or module_name == '':
             return bad_request('please input a new module name')
 
-        if module_name == origin_name:
+        if module_name == origin_module_name:
             return bad_request('no change')
 
         if Module.query.filter_by(module_name=module_name).first():
@@ -82,14 +95,16 @@ def operate_module():
 
     # 删
     if operate_type == '4':
-        if not origin_name:
-            return bad_request('please input module name')
-        module = Module.query.filter_by(module_name=origin_name).first_or_404()
-        if module.apis.all():
-            return bad_request('there are Apis under this module, please delete those Apis first')
-        db.session.delete(module)
+        if not origin_module_list:
+            return bad_request('please select module name')
+        for origin_module in origin_module_list:
+            origin_module_name = origin_module['name']
+            module = Module.query.filter_by(module_name=origin_module_name).first_or_404()
+            if module.apis.all():
+                return bad_request('there are Apis under this module, please delete those Apis first')
+            db.session.delete(module)
         session_commit()
-        data = origin_name
+        data = origin_module_list
         response = trueReturn(data, 'delete success')
         return response
 
