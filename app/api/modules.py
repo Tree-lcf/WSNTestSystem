@@ -26,19 +26,19 @@ def before_request():
 @bp.route('/moduleOperate', methods=['POST'])
 def operate_module():
     data = request.get_json() or {}
-    project_name = data.get('project_name')
+    project_id = data.get('project_id')
     module_name = data.get('module_name')
     origin_module_list = data.get('origin_module_list')
     origin_module_name = data.get('origin_module_name')
     operate_type = data.get('operate_type')
 
-    if not project_name:
-        return bad_request('must include project name')
+    if not project_id:
+        return bad_request('must include project id')
     if not operate_type:
         return bad_request('must include operate_type')
-    project = Project.query.filter_by(project_name=project_name).first_or_404()
+    project = Project.query.filter_by(id=project_id).first_or_404()
     if project.owner_name != g.current_user.username:
-        return bad_request('you are not the owner of project %s' % project_name)
+        return bad_request('you are not the owner of project %s' % project.project_name)
 
     # 增
     if operate_type == '1':
@@ -46,7 +46,7 @@ def operate_module():
             return bad_request('please input module name')
         module = Module.query.filter_by(module_name=module_name).first()
         if module:
-            return bad_request('there is module %s in this project %s' % (module_name, project_name))
+            return bad_request('there is module %s in this project %s' % (module_name, project.project_name))
 
         data = {
             'module_name': module_name,
@@ -87,7 +87,7 @@ def operate_module():
     # 查
     if operate_type == '3':
         data = {
-            'project_name': project_name,
+            'project_name': project.project_name,
             'modules': project.to_dict()['modules']
         }
         response = trueReturn(data, 'list success')

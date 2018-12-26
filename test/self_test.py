@@ -65,7 +65,7 @@ class TestRestApiCase(unittest.TestCase):
             'update_info_list': [{'origin_name': 'app_module_1', 'new_name': 'aa'}]
         }
         self.moduleOperate_1 = {
-            'project_name': 'app',
+            'project_id': 'app',
             'module_name': 'app_module_1',
             'origin_name': None,
             'operate_type': '1'
@@ -116,9 +116,9 @@ class TestRestApiCase(unittest.TestCase):
             'page_num': None,
             'per_page': None,
             'env_host': 'http://61.160.64.130:8081',
-            'env_var': '[{"uuid": "24FB4CCC-75AD-49D5-9937-0402E3A6C8E0"},{"passWord": "Jfpt123456"}]',
-            'extracts': '[{"kaptcha": "json.responseData.kaptcha"}]',
-            'asserts': '[{"eq": ["json.retCode", "0"]}]'
+            'env_var': [{"key": "uuid", 'value': "24FB4CCC-75AD-49D5-9937-0402E3A6C8E0"}, {'key': "passWord", 'value': "Jfpt123456"}],
+            'extracts': [{'key': "kaptcha", 'value': "json.responseData.kaptcha"}],
+            'asserts': [{'eq': "eq", 'actual': "json.retCode", 'expect': "0"}]
         }
         self.envOperate_1_2 = {
             'project_id': 'app',
@@ -130,8 +130,8 @@ class TestRestApiCase(unittest.TestCase):
             'per_page': None,
             'env_host': '',
             'env_var': '',
-            'extracts': '[{"kaptcha": "json.responseData.sessionID"}]',
-            'asserts': '[{"eq": ["json.retCode", "0"]}]'
+            'extracts': [{'key': "kaptcha", 'value': "json.responseData.sessionID"}],
+            'asserts': [{'eq': "eq", 'actual': "json.retCode", 'expect': "0"}]
         }
         self.envOperate_1_3 = {
             'project_id': 'app',
@@ -914,6 +914,7 @@ class TestRestApiCase(unittest.TestCase):
         response = requests.post(self.add_project_url, cookies=cookies, json=payload).json()
         response = AttrDict(response)
         project_id = response.data.project_id
+        self.moduleOperate_1['project_id'] = project_id
         response = requests.post(self.moduleOperate_url, cookies=cookies, json=self.moduleOperate_1).json()
         response = AttrDict(response)
         module_id = response.data.module_id
@@ -1000,7 +1001,7 @@ class TestRestApiCase(unittest.TestCase):
         response = AttrDict(response)
 
         project_id = response.data.project_id
-
+        self.moduleOperate_1['project_id'] = project_id
         response = requests.post(self.moduleOperate_url, cookies=cookies, json=self.moduleOperate_1).json()
         response = AttrDict(response)
         module_id = response.data.module_id

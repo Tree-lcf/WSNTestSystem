@@ -4,6 +4,7 @@ from app.models import *
 
 
 def main_ate(tests):
+    # print(tests)
     runner = HttpRunner().run(tests)
     summary = runner.summary
     return summary
@@ -210,4 +211,20 @@ def to_obj_2(data):
             }
             payload.append(obj_t)
     return payload
+
+
+def objlist_to_str(data):
+        payload = {}
+        for obj in data:
+            obj_t = {obj['key']: obj['value']}
+            payload = dict(payload, **obj_t)
+
+        payload_tostr = json.dumps(payload)
+        return payload_tostr
+
+
+if __name__ == '__main__':
+    a = [{'key': 'token', 'value': 'ew6gouhgUrHP0ayeQIAGAcFQnQCNg/xT'}]
+    b = objlist_to_str(a)
+    print(b)
 

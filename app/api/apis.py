@@ -4,6 +4,7 @@ from app.models import *
 from app.auth.auth import verify_token, token_auth_error
 from app.errors import trueReturn, bad_request
 from app.common import session_commit, Runner
+from app.common import objlist_to_str
 
 
 @bp.before_request
@@ -25,6 +26,14 @@ def operate_api():
 
     if not operate_type:
         return bad_request('must include operate_type')
+
+    # if data.get('req_body'):
+    #     req_body = objlist_to_str(data.get('req_body'))
+    #     data['req_body'] = req_body
+    #
+    # if data.get('req_cookies'):
+    #     req_cookies = objlist_to_str(data.get('req_cookies'))
+    #     data['req_cookies'] = req_cookies
 
     # 增
     if operate_type == '1':
@@ -165,13 +174,22 @@ def operate_api():
 
     # Run
     if operate_type == '5':
+
         if not data:
             return bad_request('no data found to run test')
 
+        for field in ['req_headers', 'req_cookies', 'req_params', 'req_body']:
+            if field in data:
+                payload = objlist_to_str(data.get(field))
+                data[field] = payload
+
         tester = Runner([data])
-        report = tester.run()
-        report = json.loads(report)
-        return trueReturn(report, 'run success')
+        try:
+            report = tester.run()
+            report = json.loads(report)
+            return trueReturn(report, 'run success')
+        except Exception:
+            return bad_request('wrong request')
 
 
 

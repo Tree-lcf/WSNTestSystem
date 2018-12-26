@@ -6,7 +6,7 @@ from app import db
 from datetime import datetime, timedelta
 from werkzeug.security import generate_password_hash, check_password_hash
 from flask import g
-from app.common import to_obj, to_obj_2
+from app.common import to_obj, to_obj_2, objlist_to_str
 
 
 # class FromAPIMixin(object):
@@ -136,8 +136,13 @@ class Project(db.Model):
 
     def to_dict(self):
         module_list = []
+
         for module in self.modules.order_by(Module.timestamp.desc()).all():
-            module_dict = {'name': module.module_name}
+            api_list = []
+            for api in module.apis.order_by(Api.timestamp.desc()).all():
+                api_dict = {'name': api.name, 'id': api.id, 'url': api.req_relate_url, 'method': api.req_method}
+                api_list.append(api_dict)
+            module_dict = {'name': module.module_name, 'id': module.id, 'api_list': api_list}
             module_list.append(module_dict)
 
         env_list = []
@@ -158,7 +163,6 @@ class Project(db.Model):
             'modules': {
                 'count': self.modules.count(),
                 'list': module_list
-                # 'list': [module.module_name for module in self.modules.order_by(Module.timestamp.desc()).all()]
             },
             'testcases_count': self.testcases.count(),
             'envs': {
@@ -350,6 +354,11 @@ class Api(db.Model):
                       'req_headers', 'req_cookies', 'req_params', 'req_data_type', 'req_body']:
             if field in data:
                 setattr(self, field, data[field])
+
+        for field in ['req_headers', 'req_cookies', 'req_params', 'req_body']:
+            if field in data:
+                payload = objlist_to_str(data.get(field))
+                setattr(self, field, payload)
 
         if data['module_id']:
             self.module_id = data['module_id']

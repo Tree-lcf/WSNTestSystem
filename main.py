@@ -11,5 +11,5 @@ def make_shell_context():
     return {'db': db, 'User': User, 'Project': Project}
 
 
-if __name__ == '__main__':
-    app.run(debug=True)
+# if __name__ == '__main__':
+#     app.run(debug=True, host='10.16.6.84', port=5000)
