@@ -16,7 +16,7 @@ def before_request():
 
 @bp.route('/apiOperate', methods=['POST'])
 def operate_api():
-    # operate_type : '1' = 增， '2' = 改， '3' = 查， '4' = 删, '5' = Run
+    # operate_type : '1' = 增， '2' = 改， '3' = 查， '4' = 删, '5' = Run, '6' = 筛选查
     data = request.get_json() or {}
     module_id = data.get('module_id')
     project_id = data.get('project_id')
@@ -115,43 +115,44 @@ def operate_api():
             response = trueReturn(payload, 'list success')
             return response
 
-        if module_id:
-            module = Module.query.get_or_404(module_id)
-            project = Project.query.get(module.project_id)
-            if project not in g.current_user.followed_projects().all():
-                return bad_request('you are not the member of project')
-            api_list = []
-            for api in module.apis.all():
-                api_data = api.to_dict()
-                api_list.append(api_data)
-            module_data = {
-                'module_id': module.id,
-                'api_list': api_list
-            }
-            response = trueReturn(module_data, 'list module-api success')
-            return response
-
-        if project_id:
-            project = Project.query.get(project_id)
-            if project not in g.current_user.followed_projects().all():
-                return bad_request('you are not the member of project')
-            module_list = []
-            for module in project.modules.all():
-                api_list = []
-                for api in module.apis.all():
-                    api_data = api.to_dict()
-                    api_list.append(api_data)
-                module_data = {
-                    'module_id': module.id,
-                    'api_list': api_list
-                }
-                module_list.append(module_data)
-            project_data = {
-                'project_id': project.id,
-                'module_list': module_list
-            }
-            response = trueReturn(project_data, 'list project-module-api success')
-            return response
+        # if module_id:
+        #     module = Module.query.get_or_404(module_id)
+        #     project = Project.query.get(module.project_id)
+        #     if project not in g.current_user.followed_projects().all():
+        #         return bad_request('you are not the member of project')
+        #
+        #     # api_list = []
+        #     # for api in module.apis.all():
+        #     #     api_data = api.to_dict()
+        #     #     api_list.append(api_data)
+        #     # module_data = {
+        #     #     'module_id': module.id,
+        #     #     'api_list': api_list
+        #     # }
+        #     response = trueReturn(module_data, 'list module-api success')
+        #     return response
+        #
+        # if project_id:
+        #     project = Project.query.get(project_id)
+        #     if project not in g.current_user.followed_projects().all():
+        #         return bad_request('you are not the member of project')
+        #     module_list = []
+        #     for module in project.modules.all():
+        #         api_list = []
+        #         for api in module.apis.all():
+        #             api_data = api.to_dict()
+        #             api_list.append(api_data)
+        #         module_data = {
+        #             'module_id': module.id,
+        #             'api_list': api_list
+        #         }
+        #         module_list.append(module_data)
+        #     project_data = {
+        #         'project_id': project.id,
+        #         'module_list': module_list
+        #     }
+        #     response = trueReturn(project_data, 'list project-module-api success')
+        #     return response
 
     # 删
     if operate_type == '4':
@@ -191,12 +192,51 @@ def operate_api():
         except Exception:
             return bad_request('wrong request')
 
+    # 筛选查
+    if operate_type == '6':
+        if not project_id and not module_id:
+            return bad_request('must include project_id or module_id')
+        if module_id:
+            module = Module.query.get_or_404(module_id)
+            project = Project.query.get(module.project_id)
+            modules = [module]
+        else:
+            project = Project.query.get(project_id)
+            modules = project.modules.all()
 
+        if project not in g.current_user.followed_projects().all():
+            return bad_request('you are not the member of project')
 
+        project_list = [project]
 
+        payload = []
+        for project in project_list:
+            module_list = []
+            for module in modules:
+                api_list = []
+                for api in module.apis.all():
+                    api_data = api.to_dict()
+                    api_list.append(api_data)
+                module_data = {
+                    'module_id': module.id,
+                    'module_name': module.module_name,
+                    'api_list': api_list
+                }
+                module_list.append(module_data)
+            project_data = {
+                'project_id': project.id,
+                'project_name': project.project_name,
+                'module_list': module_list
+            }
+            payload.append(project_data)
 
+        data = {
+            'Api_items': payload,
+            'meta': ''
+        }
 
-
+        response = trueReturn(data, 'special list success')
+        return response
 
 
 

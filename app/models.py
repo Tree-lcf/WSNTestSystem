@@ -402,11 +402,13 @@ class Api(db.Model):
                     api_list.append(api_data)
                 module_data = {
                     'module_id': module.id,
+                    'module_name': module.module_name,
                     'api_list': api_list
                 }
                 module_list.append(module_data)
             project_data = {
                 'project_id': project.id,
+                'project_name': project.project_name,
                 'module_list': module_list
             }
             payload.append(project_data)
