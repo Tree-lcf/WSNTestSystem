@@ -1,4 +1,4 @@
-from flask import jsonify, request, g
+from flask import request, g
 from app.models import User
 from app.auth import bp
 from .token import get_token

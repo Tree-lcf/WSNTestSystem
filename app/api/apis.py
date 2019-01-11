@@ -184,13 +184,16 @@ def operate_api():
                 payload = objlist_to_str(data.get(field))
                 data[field] = payload
 
+        # print(data)
         tester = Runner([data])
-        try:
-            report = tester.run()
-            report = json.loads(report)
-            return trueReturn(report, 'run success')
-        except Exception:
-            return bad_request('wrong request')
+        # try:
+        report = tester.run()
+        # except Exception as e:
+        #     print(e)
+        #     return bad_request('wrong request')
+
+        report = json.loads(report)
+        return trueReturn(report, 'run success')
 
     # 筛选查
     if operate_type == '6':

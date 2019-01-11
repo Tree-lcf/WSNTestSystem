@@ -1,11 +1,16 @@
 from httprunner import HttpRunner
 import threading
 from app.models import *
+from app.errors import bad_request
 
 
 def main_ate(tests):
     # print(tests)
-    runner = HttpRunner().run(tests)
+    try:
+        runner = HttpRunner().run(tests)
+    except Exception as e:
+        # print(e)
+        return bad_request(e)
     summary = runner.summary
     return summary
 
@@ -38,7 +43,7 @@ class Runner:
     def run(self):
         payload = self.load_data()
         response = main_ate(payload)
-        response = report_minify(response)
+        # response = report_minify(response)
         response = json.dumps(response, cls=MyEncoder, indent=4)
 
         return response
@@ -127,11 +132,17 @@ class MyEncoder(json.JSONEncoder):
     def default(self, obj):
         if isinstance(obj, bytes):
             return str(obj, encoding='utf-8')
+
+        if isinstance(obj, object):
+            # return str(obj, encoding='utf-8')
+            return obj.__dict__
+
         return json.JSONEncoder.default(self, obj)
 
 
 def report_minify(report):
     report = report
+    print(report)
     report.pop('platform')
     report['details'][0].pop('time')
     report['details'][0].pop('base_url')
