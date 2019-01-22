@@ -122,6 +122,7 @@ class Project(db.Model):
     envs = db.relationship('Env', backref='project', lazy='dynamic')
     apis = db.relationship('Api', backref='project', lazy='dynamic')
     testcases = db.relationship('TestCase', backref='project', lazy='dynamic')
+    suites = db.relationship('Suite', backref='project', lazy='dynamic')
     users = db.relationship(
         'User', secondary=project_user,
         backref=db.backref('projects', lazy='dynamic'), lazy='dynamic')
@@ -136,7 +137,6 @@ class Project(db.Model):
 
     def to_dict(self):
         module_list = []
-
         for module in self.modules.order_by(Module.timestamp.desc()).all():
             api_list = []
             for api in module.apis.order_by(Api.timestamp.desc()).all():
@@ -155,6 +155,14 @@ class Project(db.Model):
             }
             env_list.append(env_obj)
 
+        suite_list = []
+        for suite in self.suites.order_by(Suite.timestamp.desc()).all():
+            suite_obj = {
+                'suite_id': suite.id,
+                'suite_name': suite.suite_name
+            }
+            suite_list.append(suite_obj)
+
         data = {
             'project_id': self.id,
             'project_name': self.project_name,
@@ -164,7 +172,12 @@ class Project(db.Model):
                 'count': self.modules.count(),
                 'list': module_list
             },
+            'suites': {
+                'count': self.suites.count(),
+                'list': suite_list
+            },
             'testcases_count': self.testcases.count(),
+            'apis_count': self.apis.count(),
             'envs': {
                 'count': self.envs.count(),
                 'list': env_list
@@ -200,6 +213,46 @@ class Project(db.Model):
             }
         }
         return data
+
+    def to_collection_suite_dict(self):
+        suites_data = []
+        for suite in self.suites.order_by(Suite.timestamp.desc()).all():
+            tests_data = []
+            for test in suite.testcases.order_by(TestCase.timestamp.desc()).all():
+                teststeps_data = []
+                for item in json.loads(test.teststeps):
+                    step_id = item['step_id']
+                    teststep = TestStep.query.get_or_404(step_id)
+                    api = Api.query.get_or_404(teststep.api_id)
+                    step_data = {
+                        'step_id': step_id,
+                        'step_name': teststep.name,
+                        'api': api.req_relate_url
+                    }
+                    teststeps_data.append(step_data)
+                test_api_count = len(json.loads(test.teststeps))
+                reports_data = [report.to_dict() for report in test.reports.all()]
+                test_data = {
+                    'test_id': test.id,
+                    'test_name': test.name,
+                    'test_api_count': test_api_count,
+                    'teststeps_data': teststeps_data,
+                    'reports_data': reports_data
+                }
+                tests_data.append(test_data)
+            suite_data = {
+                'suite_id': suite.id,
+                'suite_name': suite.suite_name,
+                'tests_data': tests_data
+            }
+            suites_data.append(suite_data)
+
+        payload = {
+            'project_id': self.id,
+            'project_name': self.project_name,
+            'suites_data': suites_data
+        }
+        return payload
 
 
 class Module(db.Model):
@@ -425,11 +478,62 @@ class Api(db.Model):
         return data
 
 
+class Suite(db.Model):
+    id = db.Column(db.Integer, primary_key=True)
+    suite_name = db.Column(db.String(255))
+    timestamp = db.Column(db.DateTime, index=True, default=datetime.utcnow)
+    project_id = db.Column(db.Integer, db.ForeignKey('project.id'))
+    testcases = db.relationship('TestCase', backref='suite', lazy='dynamic')
+
+    def __repr__(self):
+        return '<Suite {}>'.format(self.name)
+
+    def from_dict(self, data):
+        for field in ['suite_name', 'project_id']:
+            if field in data:
+                setattr(self, field, data[field])
+
+    def to_dict(self):
+        tests_data = []
+        for test in self.testcases.order_by(TestCase.timestamp.desc()).all():
+            teststeps_data = []
+            for item in json.loads(test.teststeps):
+                step_id = item['step_id']
+                teststep = TestStep.query.get_or_404(step_id)
+                api = Api.query.get_or_404(teststep.api_id)
+                step_data = {
+                    'step_id': step_id,
+                    'step_name': teststep.name,
+                    'api': api.req_relate_url
+                }
+                teststeps_data.append(step_data)
+            test_api_count = len(json.loads(test.teststeps))
+            reports_data = [report.to_dict() for report in test.reports.all()]
+            test_data = {
+                'test_id': test.id,
+                'test_name': test.name,
+                'test_api_count': test_api_count,
+                'teststeps_data': teststeps_data,
+                'reports_data': reports_data
+            }
+            tests_data.append(test_data)
+        suite_data = {
+            'suite_id': self.id,
+            'suite_name': self.suite_name,
+            'project_id': self.project_id,
+            'timestamp': self.timestamp,
+            'tests_data': tests_data
+        }
+
+        return suite_data
+
+
 class TestCase(db.Model):
     __tablename__ = 'testcase'
     id = db.Column(db.Integer, primary_key=True)
     project_id = db.Column(db.Integer, db.ForeignKey('project.id'))
     api_id = db.Column(db.Integer, db.ForeignKey('api.id'))
+    suite_id = db.Column(db.Integer, db.ForeignKey('suite.id'))
     name = db.Column(db.String(255))
     test_desc = db.Column(db.String(255))
     teststeps = db.Column(db.String(255))  # "[{'step_id': 1, 'step_name': 'aa'}, {'step_id': 2, 'step_name': 'bb'}]"
@@ -454,17 +558,25 @@ class TestCase(db.Model):
         if data['env_id']:
             self.env_id = data['env_id']
 
+        if data['suite_id']:
+            self.suite_id = data['suite_id']
+
     def to_dict(self):
         api = Api.query.get(self.api_id)
+        env = Env.query.get(self.env_id)
         data = {
             'testcase_id': self.id,
             'name': self.name,
             'test_desc': self.test_desc,
             'project_name': Project.query.get(self.project_id).project_name,
             'module_name': Module.query.get(Api.query.get(self.api_id).module_id).module_name,
+            'suite_name': Suite.query.get(self.suite_id).suite_name,
             'api_name': api.name,
             'api_url': api.req_relate_url,
-            'env_id': self.env_id if self.env_id else '',
+            # 'env_id': self.env_id if self.env_id else '',
+            'env_name': env.env_name if env else '',
+            'env_host': env.env_host if env else '',
+            'env_var': env.env_var if env else '',
             'teststeps': self.teststeps,
             'has_report': True if self.reports.all() else False,
             'timestamp': self.timestamp

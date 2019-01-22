@@ -22,6 +22,7 @@ def operate_testcase():
     project_id = data.get('project_id')
     api_id = data.get('api_id')
     env_id = data.get('env_id')
+    suite_id = data.get('suite_id')
     module_id = data.get('module_id')
     testcase_id = data.get('testcase_id')
     testcase_name = data.get('name')
@@ -35,12 +36,16 @@ def operate_testcase():
 
         project = Project.query.get_or_404(project_id)
         api = Api.query.get_or_404(api_id)
+        suite = Suite.query.get_or_404(suite_id)
 
         if project not in g.current_user.followed_projects().all():
             return bad_request('you are not the member of project %s' % project.project_name)
 
         if api not in project.apis.all():
             return bad_request('no api %s in project %s' % (api.name, project.project_name))
+
+        if suite not in project.suites.all():
+            return bad_request('no suite %s in project %s' % (suite.suite_name, project.project_name))
 
         if not testcase_id:
             if not testcase_name:
@@ -81,64 +86,51 @@ def operate_testcase():
                 return bad_request('you are not the member of project')
             return trueReturn(testcase.to_dict(), 'found it')
 
-        if not project_id and not module_id:
-            page_num = int(data.get('page_num', 1))
-            per_page = int(data.get('per_page', 10))
-            payload = TestCase.to_collection_dict(page_num, per_page)
-            response = trueReturn(payload, 'list success')
-            return response
+        # if not project_id and not module_id:
+        #     page_num = int(data.get('page_num', 1))
+        #     per_page = int(data.get('per_page', 10))
+        #     payload = TestCase.to_collection_dict(page_num, per_page)
+        #     response = trueReturn(payload, 'list success')
+        #     return response
 
-        if module_id:
-            module = Module.query.get_or_404(module_id)
-            project = Project.query.get(module.project_id)
+        if suite_id:
+            suite = Suite.query.get_or_404(suite_id)
+            project = Project.query.get(suite.project_id)
             if project not in g.current_user.followed_projects().all():
                 return bad_request('you are not the member of project')
-            api_items = []
-            for api in module.apis.all():
-                testcases = []
-                for testcase in api.testcases.all():
-                    testcase_data = testcase.to_dict()
-                    testcases.append(testcase_data)
-                api_data = {
-                    'api_id': api.id,
-                    'testcases': testcases
-                }
-                api_items.append(api_data)
-            module_data = {
-                'module_id': module.id,
-                'api_items': api_items
-            }
-            response = trueReturn(module_data, 'list module-api-testcases success')
+            response = trueReturn(suite.to_dict(), 'list single suite success')
             return response
 
         if project_id:
             project = Project.query.get(project_id)
             if project not in g.current_user.followed_projects().all():
                 return bad_request('you are not the member of project')
-            module_items = []
-            for module in project.modules.all():
-                api_items = []
-                for api in module.apis.all():
-                    testcases = []
-                    for testcase in api.testcases.all():
-                        testcase_data = testcase.to_dict()
-                        testcases.append(testcase_data)
-                    api_data = {
-                        'api_id': api.id,
-                        'testcases': testcases
-                    }
-                    api_items.append(api_data)
-                module_data = {
-                    'module_id': module.id,
-                    'api_items': api_items
-                }
-                module_items.append(module_data)
-            project_data = {
-                'project_id': project.id,
-                'module_items': module_items
-            }
-            response = trueReturn(project_data, 'list project-module-api-testcases success')
+            # module_items = []
+            # for module in project.modules.all():
+            #     api_items = []
+            #     for api in module.apis.all():
+            #         testcases = []
+            #         for testcase in api.testcases.all():
+            #             testcase_data = testcase.to_dict()
+            #             testcases.append(testcase_data)
+            #         api_data = {
+            #             'api_id': api.id,
+            #             'testcases': testcases
+            #         }
+            #         api_items.append(api_data)
+            #     module_data = {
+            #         'module_id': module.id,
+            #         'api_items': api_items
+            #     }
+            #     module_items.append(module_data)
+            # project_data = {
+            #     'project_id': project.id,
+            #     'module_items': module_items
+            # }
+            response = trueReturn(project.to_collection_suite_dict(), 'list project-suites success')
             return response
+        else:
+            return bad_request('please input info for querying')
 
     # 删
     if operate_type == '3':
