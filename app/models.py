@@ -527,6 +527,33 @@ class Suite(db.Model):
 
         return suite_data
 
+    @staticmethod
+    def to_collection_dict(page_num, per_page):
+        projects = g.current_user.followed_projects().paginate(page_num, per_page, False)
+        project_list = projects.items
+        payload = []
+        for project in project_list:
+            env_list = []
+            for env in project.envs.all():
+                env_data = env.to_dict()
+                env_list.append(env_data)
+            project_data = {
+                'project_name': project.project_name,
+                'env_list': env_list
+            }
+            payload.append(project_data)
+
+        data = {
+            'env_items': payload,
+            'meta': {
+                'has_next': projects.has_next,
+                'next_num': projects.next_num,
+                'has_prev': projects.has_prev,
+                'prev_num': projects.prev_num
+            }
+        }
+        return data
+
 
 class TestCase(db.Model):
     __tablename__ = 'testcase'
@@ -549,6 +576,11 @@ class TestCase(db.Model):
             if field in data:
                 setattr(self, field, data[field])
 
+        for field in ['teststeps']:
+            if field in data:
+                payload = objlist_to_str(data.get(field))
+                setattr(self, field, payload)
+
         if data['project_id']:
             self.project_id = data['project_id']
 
@@ -564,6 +596,8 @@ class TestCase(db.Model):
     def to_dict(self):
         api = Api.query.get(self.api_id)
         env = Env.query.get(self.env_id)
+        teststeps = to_obj(self.teststeps)
+
         data = {
             'testcase_id': self.id,
             'name': self.name,
@@ -577,7 +611,7 @@ class TestCase(db.Model):
             'env_name': env.env_name if env else '',
             'env_host': env.env_host if env else '',
             'env_var': env.env_var if env else '',
-            'teststeps': self.teststeps,
+            'teststeps': teststeps,
             'has_report': True if self.reports.all() else False,
             'timestamp': self.timestamp
         }
