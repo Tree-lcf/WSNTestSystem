@@ -6,7 +6,7 @@ from app import db
 from datetime import datetime, timedelta
 from werkzeug.security import generate_password_hash, check_password_hash
 from flask import g
-from app.common import to_obj, to_obj_2, objlist_to_str
+from app.common import to_obj, to_obj_2, data_to_server, to_front
 
 
 # class FromAPIMixin(object):
@@ -163,6 +163,14 @@ class Project(db.Model):
             }
             suite_list.append(suite_obj)
 
+        api_list = []
+        for api in self.apis.order_by(Api.timestamp.desc()).all():
+            api_obj = {
+                'api_id': api.id,
+                'api_name': api.name
+            }
+            api_list.append(api_obj)
+
         data = {
             'project_id': self.id,
             'project_name': self.project_name,
@@ -177,7 +185,10 @@ class Project(db.Model):
                 'list': suite_list
             },
             'testcases_count': self.testcases.count(),
-            'apis_count': self.apis.count(),
+            'apis': {
+                'count': self.apis.count(),
+                'list': api_list
+            },
             'envs': {
                 'count': self.envs.count(),
                 'list': env_list
@@ -271,6 +282,10 @@ class Module(db.Model):
                 setattr(self, field, data[field])
 
     def to_dict(self):
+        api_list = []
+        for api in self.apis.order_by(Api.timestamp.desc()).all():
+            api_dict = {'name': api.name, 'id': api.id, 'url': api.req_relate_url, 'method': api.req_method}
+            api_list.append(api_dict)
         data = {
             'module_id': self.id,
             'module_name': self.module_name,
@@ -278,7 +293,7 @@ class Module(db.Model):
             'timestamp': self.timestamp,
             'apis': {
                 'count': self.apis.count(),
-                'list': [api.api_name for api in self.apis.order_by(Api.timestamp.desc()).all()]
+                'list': api_list
             }
         }
         return data
@@ -410,7 +425,7 @@ class Api(db.Model):
 
         for field in ['req_headers', 'req_cookies', 'req_params', 'req_body']:
             if field in data:
-                payload = objlist_to_str(data.get(field))
+                payload = json.dumps(data_to_server(data.get(field)))
                 setattr(self, field, payload)
 
         if data['module_id']:
@@ -572,14 +587,17 @@ class TestCase(db.Model):
         return '<TestCase {}>'.format(self.name)
 
     def from_dict(self, data):
-        for field in ['name', 'test_desc', 'teststeps']:
+        for field in ['name', 'test_desc']:
             if field in data:
                 setattr(self, field, data[field])
 
         for field in ['teststeps']:
             if field in data:
-                payload = objlist_to_str(data.get(field))
-                setattr(self, field, payload)
+                steps = []
+                for payload in data.get(field):
+                    step = data_to_server(payload)
+                    steps.append(step)
+                setattr(self, field, steps)
 
         if data['project_id']:
             self.project_id = data['project_id']
@@ -596,7 +614,7 @@ class TestCase(db.Model):
     def to_dict(self):
         api = Api.query.get(self.api_id)
         env = Env.query.get(self.env_id)
-        teststeps = to_obj(self.teststeps)
+        teststeps = to_front(self.teststeps)
 
         data = {
             'testcase_id': self.id,

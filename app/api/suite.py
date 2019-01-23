@@ -14,7 +14,7 @@ def before_request():
 
 
 @bp.route('/suiteOperate', methods=['POST'])
-def operate_env():
+def operate_suite():
     '''
     :input:
     {
@@ -57,7 +57,7 @@ def operate_env():
 
     # 改
     if operate_type == '2':
-        suite = Env.query.get_or_404(suite_id)
+        suite = Suite.query.get_or_404(suite_id)
         if Project.query.get(suite.project_id) not in g.current_user.followed_projects().all():
             return bad_request('you are not the member of project')
 
@@ -75,13 +75,6 @@ def operate_env():
 
     # 查
     if operate_type == '3':
-        '''
-        [{
-        'project_name': project_name,
-        'env_list':[{}]
-        }]
-        '''
-
         response = trueReturn(project.to_collection_suite_dict(), 'list project-suites success')
         return response
 

@@ -1,10 +1,11 @@
+import json
 from app.api import bp
 from flask import request
 from app.models import *
 from app.auth.auth import verify_token, token_auth_error
 from app.errors import trueReturn, bad_request
 from app.common import session_commit, Runner
-from app.common import objlist_to_str
+from app.common import data_to_server
 
 
 @bp.before_request
@@ -181,7 +182,7 @@ def operate_api():
 
         for field in ['req_headers', 'req_cookies', 'req_params', 'req_body']:
             if field in data:
-                payload = objlist_to_str(data.get(field))
+                payload = json.dumps(data_to_server(data.get(field)))
                 data[field] = payload
 
         # print(data)
@@ -210,35 +211,39 @@ def operate_api():
         if project not in g.current_user.followed_projects().all():
             return bad_request('you are not the member of project')
 
-        project_list = [project]
+        # project_list = [project]
+
+        # payload = []
+        # for project in project_list:
+        #     module_list = []
+        #     for module in modules:
+        #         api_list = []
+        #         for api in module.apis.all():
+        #             api_data = api.to_dict()
+        #             api_list.append(api_data)
+        #         module_data = {
+        #             'module_id': module.id,
+        #             'module_name': module.module_name,
+        #             'api_list': api_list
+        #         }
+        #         module_list.append(module_data)
+        #     project_data = {
+        #         'project_id': project.id,
+        #         'project_name': project.project_name,
+        #         'module_list': module_list
+        #     }
+        #     payload.append(project_data)
+
+        # data = {
+        #     'Api_items': payload,
+        #     'meta': ''
+        # }
 
         payload = []
-        for project in project_list:
-            module_list = []
-            for module in modules:
-                api_list = []
-                for api in module.apis.all():
-                    api_data = api.to_dict()
-                    api_list.append(api_data)
-                module_data = {
-                    'module_id': module.id,
-                    'module_name': module.module_name,
-                    'api_list': api_list
-                }
-                module_list.append(module_data)
-            project_data = {
-                'project_id': project.id,
-                'project_name': project.project_name,
-                'module_list': module_list
-            }
-            payload.append(project_data)
+        for module in modules:
+            payload.append(module.to_dict())
 
-        data = {
-            'Api_items': payload,
-            'meta': ''
-        }
-
-        response = trueReturn(data, 'special list success')
+        response = trueReturn(payload, 'special list success')
         return response
 
 

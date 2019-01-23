@@ -224,18 +224,33 @@ def to_obj_2(data):
     return payload
 
 
-def objlist_to_str(data):
+# "[{'step_id': 1, 'step_name': 'aa'}, {'step_id': 2, 'step_name': 'bb'}]"
+def to_front(data):
+    payloads = []
+    for obj in json.loads(data):
+        payload = {}
+        for item, value in obj.items():
+            obj_t = {
+                'key': item,
+                'value': value
+            }
+            payload = dict(payload, **obj_t)
+        payloads.append(payload)
+    return payloads
+
+
+def data_to_server(data):
         payload = {}
         for obj in data:
             obj_t = {obj['key']: obj['value']}
             payload = dict(payload, **obj_t)
 
-        payload_tostr = json.dumps(payload)
-        return payload_tostr
+        # payload_tostr = json.dumps(payload)
+        return payload
 
 
 if __name__ == '__main__':
     a = [{'key': 'token', 'value': 'ew6gouhgUrHP0ayeQIAGAcFQnQCNg/xT'}]
-    b = objlist_to_str(a)
+    b = data_to_server(a)
     print(b)
 

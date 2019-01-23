@@ -28,6 +28,7 @@ def operate_module():
     data = request.get_json() or {}
     project_id = data.get('project_id')
     module_name = data.get('module_name')
+    module_id = data.get('module_id')
     origin_module_list = data.get('origin_module_list')
     origin_module_name = data.get('origin_module_name')
     operate_type = data.get('operate_type')
@@ -86,6 +87,12 @@ def operate_module():
 
     # 查
     if operate_type == '3':
+        if module_id:
+            module = Api.query.get_or_404(module_id)
+            if Project.query.get(module.project_id) not in g.current_user.followed_projects().all():
+                return bad_request('you are not the member of project')
+            return trueReturn(module.to_dict(), 'found it')
+
         data = {
             'project_name': project.project_name,
             'modules': project.to_dict()['modules']
