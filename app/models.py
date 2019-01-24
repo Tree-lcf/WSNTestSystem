@@ -6,7 +6,7 @@ from app import db
 from datetime import datetime, timedelta
 from werkzeug.security import generate_password_hash, check_password_hash
 from flask import g
-from app.common import to_obj, to_obj_2, data_to_server, to_front
+from app.common import list_to_obj, list_to_obj_2, data_to_server, to_front, dict_to_obj
 
 
 # class FromAPIMixin(object):
@@ -344,9 +344,9 @@ class Env(db.Model):
 
     def to_dict(self):
 
-        env_var = to_obj(self.env_var)
-        extracts = to_obj(self.extracts)
-        asserts = to_obj_2(self.asserts)
+        env_var = list_to_obj(self.env_var)
+        extracts = list_to_obj(self.extracts)
+        asserts = list_to_obj_2(self.asserts)
 
         data = {
             'env_id': self.id,
@@ -435,6 +435,11 @@ class Api(db.Model):
             self.project_id = data['project_id']
 
     def to_dict(self):
+        req_headers = dict_to_obj(self.req_headers)
+        req_cookies = dict_to_obj(self.req_cookies)
+        req_params = dict_to_obj(self.req_params)
+        req_body = dict_to_obj(self.req_body)
+
         data = {
             'api_id': self.id,
             'name': self.name,
@@ -443,11 +448,11 @@ class Api(db.Model):
             'req_method': self.req_method,
             'req_temp_host': self.req_temp_host,
             'req_relate_url': self.req_relate_url,
-            'req_headers': self.req_headers,
-            'req_cookies': self.req_cookies,
-            'req_params': self.req_params,
+            'req_headers': req_headers,
+            'req_cookies': req_cookies,
+            'req_params': req_params,
             'req_data_type': self.req_data_type,
-            'req_body': self.req_body,
+            'req_body': req_body,
             'timestamp': self.timestamp,
             'testcases': {
                 'count': self.testcases.count(),
@@ -712,9 +717,14 @@ class TestStep(db.Model):
         return '<TestStep {}>'.format(self.name)
 
     def from_dict(self, data):
-        for field in ['name', 'req_params', 'req_headers', 'req_cookies', 'req_body']:
+        for field in ['name']:
             if field in data:
                 setattr(self, field, data[field])
+
+        for field in ['req_headers', 'req_cookies', 'req_params', 'req_body']:
+            if field in data:
+                payload = json.dumps(data_to_server(data.get(field)))
+                setattr(self, field, payload)
 
         self.api_id = data['api_id']
 
@@ -722,16 +732,21 @@ class TestStep(db.Model):
             self.env_id = data['env_id']
 
     def to_dict(self):
+        req_headers = dict_to_obj(self.req_headers)
+        req_cookies = dict_to_obj(self.req_cookies)
+        req_params = dict_to_obj(self.req_params)
+        req_body = dict_to_obj(self.req_body)
+
         data = {
             'teststep_id': self.id,
             'teststep_name': self.name,
             'api_id': self.api_id,
             'env_id': self.env_id,
             'timestamp': self.timestamp,
-            'req_params': self.req_params,
-            'req_headers': self.req_headers,
-            'req_cookies': self.req_cookies,
-            'req_body': self.req_body,
+            'req_params': req_params,
+            'req_headers': req_headers,
+            'req_cookies': req_cookies,
+            'req_body': req_body
         }
         return data
 

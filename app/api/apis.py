@@ -17,7 +17,7 @@ def before_request():
 
 @bp.route('/apiOperate', methods=['POST'])
 def operate_api():
-    # operate_type : '1' = 增， '2' = 改， '3' = 查， '4' = 删, '5' = Run, '6' = 筛选查
+    # operate_type : '1' = 增， '2' = 改， '3' = 查(带API ID)， '4' = 删, '5' = Run, '6' = 筛选查(不带API ID)
     data = request.get_json() or {}
     module_id = data.get('module_id')
     project_id = data.get('project_id')
@@ -107,6 +107,7 @@ def operate_api():
             api = Api.query.get_or_404(api_id)
             if Project.query.get(api.project_id) not in g.current_user.followed_projects().all():
                 return bad_request('you are not the member of project')
+            print(api.to_dict())
             return trueReturn(api.to_dict(), 'found it')
 
         if not project_id and not module_id:

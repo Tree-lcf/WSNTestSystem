@@ -199,7 +199,7 @@ class RunJob:
         return thread.get_result()
 
 
-def to_obj(data):
+def list_to_obj(data):
     payload = []
     for obj in json.loads(data):
         for item, value in obj.items():
@@ -211,7 +211,7 @@ def to_obj(data):
     return payload
 
 
-def to_obj_2(data):
+def list_to_obj_2(data):
     payload = []
     for obj in json.loads(data):
         for item, value in obj.items():
@@ -221,6 +221,20 @@ def to_obj_2(data):
                 'expect': value[1]
             }
             payload.append(obj_t)
+    return payload
+
+
+def dict_to_obj(data):
+    payload = []
+    data_dict = json.loads(data)
+    if not data_dict:
+        return []
+    for item, value in data_dict.items():
+        obj_t = {
+            'key': item,
+            'value': value
+        }
+        payload.append(obj_t)
     return payload
 
 
