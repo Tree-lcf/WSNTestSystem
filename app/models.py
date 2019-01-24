@@ -440,6 +440,15 @@ class Api(db.Model):
         req_params = dict_to_obj(self.req_params)
         req_body = dict_to_obj(self.req_body)
 
+        testcase_list = []
+        for testcase in self.testcases.order_by(TestCase.timestamp.desc()).all():
+            testcase_dict = {'name': testcase.name, 'id': testcase.id}
+            testcase_list.append(testcase_dict)
+        teststep_list = []
+        for teststep in self.teststeps.order_by(TestStep.timestamp.desc()).all():
+            teststep_dict = {'name': teststep.name, 'id': teststep.id}
+            teststep_list.append(teststep_dict)
+
         data = {
             'api_id': self.id,
             'name': self.name,
@@ -456,7 +465,11 @@ class Api(db.Model):
             'timestamp': self.timestamp,
             'testcases': {
                 'count': self.testcases.count(),
-                'list': [testcase.name for testcase in self.testcases.order_by(TestCase.timestamp.desc()).all()]
+                'list': testcase_list
+            },
+            'teststeps': {
+                'count': self.teststeps.count(),
+                'list': teststep_list
             }
         }
         return data
@@ -583,7 +596,8 @@ class TestCase(db.Model):
     suite_id = db.Column(db.Integer, db.ForeignKey('suite.id'))
     name = db.Column(db.String(255))
     test_desc = db.Column(db.String(255))
-    teststeps = db.Column(db.String(255))  # "[{'step_id': 1, 'step_name': 'aa'}, {'step_id': 2, 'step_name': 'bb'}]"
+    # teststeps = db.Column(db.String(255))  # "[{'step_id': 1, 'step_name': 'aa'}, {'step_id': 2, 'step_name': 'bb'}]"
+    teststeps = db.relationship('TestStep', backref='testcase', lazy='dynamic')
     env_id = db.Column(db.Integer, db.ForeignKey('env.id'))
     timestamp = db.Column(db.DateTime, index=True, default=datetime.utcnow)
     reports = db.relationship('Report', backref='testcase', lazy='dynamic')
@@ -708,6 +722,7 @@ class TestStep(db.Model):
     timestamp = db.Column(db.DateTime, index=True, default=datetime.utcnow)
     api_id = db.Column(db.Integer, db.ForeignKey('api.id'))
     env_id = db.Column(db.Integer, db.ForeignKey('env.id'))
+    testcase_id = db.Column(db.Integer, db.ForeignKey('testcase.id'))
     req_params = db.Column(db.Text())
     req_headers = db.Column(db.Text())
     req_cookies = db.Column(db.Text())
@@ -736,12 +751,25 @@ class TestStep(db.Model):
         req_cookies = dict_to_obj(self.req_cookies)
         req_params = dict_to_obj(self.req_params)
         req_body = dict_to_obj(self.req_body)
+        api = Api.query.get_or_404(self.api_id)
+        env = Env.query.get_or_404(self.env_id)
 
         data = {
             'teststep_id': self.id,
             'teststep_name': self.name,
-            'api_id': self.api_id,
-            'env_id': self.env_id,
+            'api': [
+                {'api_id': self.api_id},
+                {'api_name': api.name},
+                {'api_url': api.req_relate_url}
+                ],
+            'env': [
+                {'env_id': self.env_id},
+                {'env_name': env.env_name},
+                {'env_host': env.env_host},
+                {'env_var': env.env_var},
+                {'extracts': env.extracts},
+                {'asserts': env.asserts}
+                ],
             'timestamp': self.timestamp,
             'req_params': req_params,
             'req_headers': req_headers,

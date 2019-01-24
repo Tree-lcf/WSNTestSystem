@@ -20,7 +20,7 @@ def operate_teststep():
     '''
     data = request.get_json() or {}
     api_id = data.get('api_id')
-    teststep_name = data.get('name')
+    name = data.get('name')
     teststep_id = data.get('teststep_id')
     operate_type = data.get('operate_type')
 
@@ -36,10 +36,10 @@ def operate_teststep():
     # 增，改
     if operate_type == '1':
         if not teststep_id:
-            if not teststep_name:
+            if not name:
                 return bad_request('please input teststep_name')
-            if TestStep.query.filter_by(name=teststep_name, api_id=api_id).first():
-                return bad_request('Teststep %s already exists' % teststep_name)
+            if TestStep.query.filter_by(name=name, api_id=api_id).first():
+                return bad_request('Teststep %s already exists' % name)
 
             teststep = TestStep()
             teststep.from_dict(data)
@@ -53,8 +53,8 @@ def operate_teststep():
         if teststep_id:
             teststep = TestStep.query.get_or_404(teststep_id)
 
-            if teststep_name and teststep_name != teststep.name \
-                    and TestStep.query.filter_by(name=teststep_name).first():
+            if name and name != teststep.name \
+                    and TestStep.query.filter_by(name=name).first():
                 return bad_request('please use a different teststep name')
 
             teststep.from_dict(data)

@@ -107,7 +107,6 @@ def operate_api():
             api = Api.query.get_or_404(api_id)
             if Project.query.get(api.project_id) not in g.current_user.followed_projects().all():
                 return bad_request('you are not the member of project')
-            print(api.to_dict())
             return trueReturn(api.to_dict(), 'found it')
 
         if not project_id and not module_id:
