@@ -28,6 +28,8 @@ def operate_testcase():
     testcase_name = data.get('name')
     operate_type = data.get('operate_type')
 
+    print(data)
+
     if not operate_type:
         return bad_request('must include operate_type')
 

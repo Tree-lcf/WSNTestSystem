@@ -596,8 +596,24 @@ class TestCase(db.Model):
     suite_id = db.Column(db.Integer, db.ForeignKey('suite.id'))
     name = db.Column(db.String(255))
     test_desc = db.Column(db.String(255))
-    # teststeps = db.Column(db.String(255))  # "[{'step_id': 1, 'step_name': 'aa'}, {'step_id': 2, 'step_name': 'bb'}]"
-    teststeps = db.relationship('TestStep', backref='testcase', lazy='dynamic')
+    # {
+    #     'teststeps ': [{
+    #         'id ': 254,
+    #         'name ': '步骤222 '
+    #     }, {
+    #         'id ': 253,
+    #         'name ': '步骤111 '
+    #     }]
+    # }
+    teststeps = db.Column(db.Text())
+    # {
+    # 'steps': [
+    #               [{'key': 'step_id', 'value': 1}, {'key': 'step_seq', 'value': 1}],
+    #               [{'key': 'step_id', 'value': 1}, {'key': 'step_seq', 'value': 1}]
+    #           ]
+    # }
+    # "[{'step_id': 1, 'step_name': 'aa'}, {'step_id': 2, 'step_name': 'bb'}]"
+    # teststeps = db.relationship('TestStep', backref='testcase', lazy='dynamic')
     env_id = db.Column(db.Integer, db.ForeignKey('env.id'))
     timestamp = db.Column(db.DateTime, index=True, default=datetime.utcnow)
     reports = db.relationship('Report', backref='testcase', lazy='dynamic')
@@ -722,7 +738,7 @@ class TestStep(db.Model):
     timestamp = db.Column(db.DateTime, index=True, default=datetime.utcnow)
     api_id = db.Column(db.Integer, db.ForeignKey('api.id'))
     env_id = db.Column(db.Integer, db.ForeignKey('env.id'))
-    testcase_id = db.Column(db.Integer, db.ForeignKey('testcase.id'))
+    # testcase_id = db.Column(db.Integer, db.ForeignKey('testcase.id'))
     req_params = db.Column(db.Text())
     req_headers = db.Column(db.Text())
     req_cookies = db.Column(db.Text())
