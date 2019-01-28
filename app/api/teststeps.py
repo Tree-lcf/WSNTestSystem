@@ -3,7 +3,7 @@ from flask import request
 from app.models import *
 from app.auth.auth import verify_token, token_auth_error
 from app.errors import trueReturn, bad_request
-from app.common import session_commit
+from app.common import session_commit, Runner
 
 
 @bp.before_request
@@ -16,19 +16,21 @@ def before_request():
 @bp.route('/testStepOperate', methods=['POST'])
 def operate_teststep():
     '''
-    operate_type : '1' = 增，改  '2' = 查， '3' = 删
+    operate_type : '1' = 增，改  '2' = 查， '3' = 删，'4' = 运行
     '''
     data = request.get_json() or {}
     api_id = data.get('api_id')
     name = data.get('name')
     teststep_id = data.get('teststep_id')
     operate_type = data.get('operate_type')
+    project_id = data.get('project_id')
+    module_id = data.get('module_id')
 
     if not operate_type:
         return bad_request('must include operate_type')
 
-    api = Api.query.get_or_404(api_id)
-    project = Project.query.get_or_404(api.project_id)
+    # api = Api.query.get_or_404(api_id)
+    project = Project.query.get_or_404(project_id)
 
     if project not in g.current_user.followed_projects().all():
         return bad_request('you are not the member of project %s' % project.project_name)
@@ -69,9 +71,35 @@ def operate_teststep():
     if operate_type == '2':
         if teststep_id:
             teststep = TestStep.query.get_or_404(teststep_id)
+            api = Api.query.get_or_404(teststep.api_id)
+            if Project.query.get_or_404(api.project_id) not in g.current_user.followed_projects().all():
+                return bad_request('you are not the member of project')
             return trueReturn(teststep.to_dict(), 'found it')
+
+        if api_id:
+            api = Api.query.get_or_404(api_id)
+            project = Project.query.get(api.project_id)
+            if project not in g.current_user.followed_projects().all():
+                return bad_request('you are not the member of project')
+            response = trueReturn(api.to_collection_step_dict(), 'list api-steps success')
+            return response
+
+        if module_id:
+            module = Module.query.get_or_404(module_id)
+            project = Project.query.get(module.project_id)
+            if project not in g.current_user.followed_projects().all():
+                return bad_request('you are not the member of project')
+            response = trueReturn(module.to_collection_step_dict(), 'list module-steps success')
+            return response
+
+        if project_id:
+            project = Project.query.get(project_id)
+            if project not in g.current_user.followed_projects().all():
+                return bad_request('you are not the member of project')
+            response = trueReturn(project.to_collection_step_dict(), 'list project-steps success')
+            return response
         else:
-            return bad_request('please select one teststep')
+            return bad_request('please input info for querying')
 
     # 删
     if operate_type == '3':
@@ -88,4 +116,43 @@ def operate_teststep():
         }
         response = trueReturn(data, 'delete success')
         return response
+
+    # Run
+    if operate_type == '4':
+        teststep = TestStep.query.get_or_404(teststep_id)
+        env = Env.query.get_or_404(teststep.env_id)
+        config = {
+            'name': teststep.name,
+            'request': {
+                'base_url': env.env_host,
+            },
+            'variables': json.loads(env.env_var)  # [{"user_agent": "iOS/10.3"}, {"user_agent": "iOS/10.3"}]
+        }
+
+        api = Api.query.get_or_404(teststep.api_id)
+
+        data = {
+            'name': teststep.name,
+            'req_method': api.req_method,
+            'req_temp_host': env.env_host if env.env_host else '',
+            'req_relate_url': api.req_relate_url,
+            'req_data_type': api.req_data_type,
+            'req_headers': teststep.req_headers if teststep.req_headers else api.req_headers,
+        # '{"Content-Type": "application/json"}'
+            'req_cookies': teststep.req_cookies if teststep.req_cookies else api.req_cookies,
+        # '{"token": "application/json"}'
+            'req_params': teststep.req_params if teststep.req_params else api.req_params,
+        # '{"token": "application/json"}'
+            'req_body': teststep.req_body if teststep.req_body else api.req_body,  # '{"type": "ios"}'
+            'variables': env.env_var if env.env_var else '',  # [{"user_agent": "iOS/10.3"}, ]
+            'extracts': env.extracts if env.extracts else '',
+        # [{"user_agent": "iOS/10.3"}, {"user_agent": "iOS/10.3"}]
+            'asserts': env.asserts if env.asserts else ''  # [{'eq': ['status_code', 200]}]
+        }
+        # print(payload)
+        # print(config)
+        tester = Runner(data, config)
+        report = tester.run()
+        report = json.loads(report)
+        return trueReturn(report, 'run success')
 

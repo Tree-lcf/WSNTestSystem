@@ -31,6 +31,7 @@ class User(db.Model):
     is_administrator = db.Column(db.Boolean, default=False)
     token = db.Column(db.String(32), index=True, unique=True)
     token_expiration = db.Column(db.DateTime)
+    teststeps = db.relationship('TestStep', backref='user', lazy='dynamic')
     # create_projects = db.relationship('Project', backref='owner', lazy='dynamic')
 
     # projects = db.relationship(
@@ -265,6 +266,33 @@ class Project(db.Model):
         }
         return payload
 
+    def to_collection_step_dict(self):
+        teststeps_data = []
+        for module in self.modules.order_by(Module.timestamp.desc()).all():
+            for api in module.apis.order_by(Api.timestamp.desc()).all():
+                for step in api.teststeps.order_by(TestStep.timestamp.desc()).all():
+                    api_obj = Api.query.get_or_404(step.api_id)
+                    env_obj = Env.query.get_or_404(step.env_id)
+                    user_obj = User.query.get_or_404(step.user_id)
+                    api_data = {'api_id': api_obj.id, 'api_name': api_obj.name, 'api_url': api_obj.req_relate_url}
+                    env_data = {'env_id': env_obj.id, 'env_name': env_obj.env_name}
+                    user_data = {'user_id': user_obj.id, 'user_name': user_obj.username}
+
+                    step_data = {
+                        'step_id': step.id,
+                        'step_name': step.name,
+                        'api': api_data,
+                        'env': env_data,
+                        'user': user_data
+                    }
+                    teststeps_data.append(step_data)
+
+        payload = {
+            'project': {'project_id': self.id, 'project_name': self.project_name},
+            'teststeps': teststeps_data
+        }
+        return payload
+
 
 class Module(db.Model):
     id = db.Column(db.Integer, primary_key=True)
@@ -297,6 +325,32 @@ class Module(db.Model):
             }
         }
         return data
+
+    def to_collection_step_dict(self):
+        project = Project.query.get_or_404(self.project_id)
+
+        teststeps_data = []
+        for api in self.apis.order_by(Api.timestamp.desc()).all():
+            for step in api.teststeps(TestStep.timestamp.desc()).all():
+
+                api = Api.query.get_or_404(step.api_id)
+                env = Env.query.get_or_404(step.env_id)
+                user = User.query.get_or_404(step.user_id)
+
+                step_data = {
+                    'step_id': step.id,
+                    'step_name': step.name,
+                    'api': {'api_id': api.id, 'api_name': api.name, 'api_url': api.req_relate_url},
+                    'env': {'env_id': env.id, 'env_name': env.env_name},
+                    'user': {'user_id': user.id, 'user_name': user.username}
+                }
+                teststeps_data.append(step_data)
+
+        payload = {
+            'project': {'project_id': project.id, 'project_name': project.project_name},
+            'teststeps': teststeps_data
+        }
+        return payload
 
 
 class Env(db.Model):
@@ -510,6 +564,31 @@ class Api(db.Model):
         }
         return data
 
+    def to_collection_step_dict(self):
+        project = Project.query.get_or_404(self.project_id)
+
+        teststeps_data = []
+        for step in self.teststeps(TestStep.timestamp.desc()).all():
+
+            api = Api.query.get_or_404(step.api_id)
+            env = Env.query.get_or_404(step.env_id)
+            user = User.query.get_or_404(step.user_id)
+
+            step_data = {
+                'step_id': step.id,
+                'step_name': step.name,
+                'api': {'api_id': api.id, 'api_name': api.name, 'api_url': api.req_relate_url},
+                'env': {'env_id': env.id, 'env_name': env.env_name},
+                'user': {'user_id': user.id, 'user_name': user.username}
+            }
+            teststeps_data.append(step_data)
+
+        payload = {
+            'project': {'project_id': project.id, 'project_name': project.project_name},
+            'teststeps': teststeps_data
+        }
+        return payload
+
 
 class Suite(db.Model):
     id = db.Column(db.Integer, primary_key=True)
@@ -517,6 +596,7 @@ class Suite(db.Model):
     timestamp = db.Column(db.DateTime, index=True, default=datetime.utcnow)
     project_id = db.Column(db.Integer, db.ForeignKey('project.id'))
     testcases = db.relationship('TestCase', backref='suite', lazy='dynamic')
+    # teststeps = db.relationship('TestStep', backref='suite', lazy='dynamic')
 
     def __repr__(self):
         return '<Suite {}>'.format(self.name)
@@ -560,32 +640,32 @@ class Suite(db.Model):
 
         return suite_data
 
-    @staticmethod
-    def to_collection_dict(page_num, per_page):
-        projects = g.current_user.followed_projects().paginate(page_num, per_page, False)
-        project_list = projects.items
-        payload = []
-        for project in project_list:
-            env_list = []
-            for env in project.envs.all():
-                env_data = env.to_dict()
-                env_list.append(env_data)
-            project_data = {
-                'project_name': project.project_name,
-                'env_list': env_list
-            }
-            payload.append(project_data)
-
-        data = {
-            'env_items': payload,
-            'meta': {
-                'has_next': projects.has_next,
-                'next_num': projects.next_num,
-                'has_prev': projects.has_prev,
-                'prev_num': projects.prev_num
-            }
-        }
-        return data
+    # @staticmethod
+    # def to_collection_dict(page_num, per_page):
+    #     projects = g.current_user.followed_projects().paginate(page_num, per_page, False)
+    #     project_list = projects.items
+    #     payload = []
+    #     for project in project_list:
+    #         env_list = []
+    #         for env in project.envs.all():
+    #             env_data = env.to_dict()
+    #             env_list.append(env_data)
+    #         project_data = {
+    #             'project_name': project.project_name,
+    #             'env_list': env_list
+    #         }
+    #         payload.append(project_data)
+    #
+    #     data = {
+    #         'env_items': payload,
+    #         'meta': {
+    #             'has_next': projects.has_next,
+    #             'next_num': projects.next_num,
+    #             'has_prev': projects.has_prev,
+    #             'prev_num': projects.prev_num
+    #         }
+    #     }
+    #     return data
 
 
 class TestCase(db.Model):
@@ -735,9 +815,12 @@ class TestStep(db.Model):
     __tablename__ = 'teststep'
     id = db.Column(db.Integer, primary_key=True)
     name = db.Column(db.String(255))
+    test_desc = db.Column(db.String(255))
     timestamp = db.Column(db.DateTime, index=True, default=datetime.utcnow)
     api_id = db.Column(db.Integer, db.ForeignKey('api.id'))
     env_id = db.Column(db.Integer, db.ForeignKey('env.id'))
+    user_id = db.Column(db.Integer, db.ForeignKey('user.id'))
+    # suite_id = db.Column(db.Integer, db.ForeignKey('suite.id'))
     # testcase_id = db.Column(db.Integer, db.ForeignKey('testcase.id'))
     req_params = db.Column(db.Text())
     req_headers = db.Column(db.Text())
@@ -748,8 +831,14 @@ class TestStep(db.Model):
         return '<TestStep {}>'.format(self.name)
 
     def from_dict(self, data):
-        for field in ['name']:
+        user = g.current_user
+        self.user_id = user.id
+
+        for field in ['name', 'api_id', 'env_id', 'test_desc']:
             if field in data:
+                if not data[field]:
+                    print('null, bad request')
+
                 setattr(self, field, data[field])
 
         for field in ['req_headers', 'req_cookies', 'req_params', 'req_body']:
@@ -757,10 +846,10 @@ class TestStep(db.Model):
                 payload = json.dumps(data_to_server(data.get(field)))
                 setattr(self, field, payload)
 
-        self.api_id = data['api_id']
-
-        if data['env_id']:
-            self.env_id = data['env_id']
+        # self.api_id = data['api_id']
+        #
+        # if data['env_id']:
+        #     self.env_id = data['env_id']
 
     def to_dict(self):
         req_headers = dict_to_obj(self.req_headers)
@@ -769,23 +858,23 @@ class TestStep(db.Model):
         req_body = dict_to_obj(self.req_body)
         api = Api.query.get_or_404(self.api_id)
         env = Env.query.get_or_404(self.env_id)
+        project = Project.query.get_or_404(api.project_id)
+        module = Module.query.get_or_404(api.module_id)
+        user = User.query.get_or_404(self.user_id)
 
         data = {
+            'project': {'project_id': project.id, 'project_name': project.project_name},
+            'module': {'module_id': module.id, 'module_name': module.module_name},
             'teststep_id': self.id,
             'teststep_name': self.name,
-            'api': [
-                {'api_id': self.api_id},
-                {'api_name': api.name},
-                {'api_url': api.req_relate_url}
-                ],
-            'env': [
-                {'env_id': self.env_id},
-                {'env_name': env.env_name},
-                {'env_host': env.env_host},
-                {'env_var': env.env_var},
-                {'extracts': env.extracts},
-                {'asserts': env.asserts}
-                ],
+            'user': {'user_id': self.user_id, 'user_name': user.username},
+            'api': {'api_id': self.api_id, 'api_name': api.name, 'api_url': api.req_relate_url},
+            'env': {'env_id': self.env_id,
+                    'env_name': env.env_name,
+                    'env_host': env.env_host,
+                    'env_var': env.env_var,
+                    'extracts': env.extracts,
+                    'asserts': env.asserts},
             'timestamp': self.timestamp,
             'req_params': req_params,
             'req_headers': req_headers,
