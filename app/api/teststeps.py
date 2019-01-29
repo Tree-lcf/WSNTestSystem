@@ -149,10 +149,34 @@ def operate_teststep():
         # [{"user_agent": "iOS/10.3"}, {"user_agent": "iOS/10.3"}]
             'asserts': env.asserts if env.asserts else ''  # [{'eq': ['status_code', 200]}]
         }
-        # print(payload)
+        # print(data)
         # print(config)
-        tester = Runner(data, config)
-        report = tester.run()
-        report = json.loads(report)
-        return trueReturn(report, 'run success')
+        tester = Runner([data], config)
+        summary = tester.run()
+        summary = json.loads(summary)
+        # return trueReturn(report, 'run success')
 
+        print(summary)
+        # 这里summary格式为dict，理论应该为string，需要明天试一下，testcase那里也有同样问题
+
+        data = {
+            'summary': summary,
+            'test_result': summary['details'][0]['records'][0]['meta_data']['response']['ok'],
+            'teststep_id': teststep.id,
+            'name': teststep.name
+        }
+
+        # 这段代码是为了之后，若只保留一个测试报告，对原有报告进行更新的时候使用
+        report_o = teststep.reports.order_by(Report.timestamp.desc()).first()
+        if not report_o:
+            report = Report()
+        else:
+            report = report_o
+
+        # report = Report()
+        report.from_dict(data)
+        db.session.add(report)
+        session_commit()
+
+        response = trueReturn({'report_id': report.id}, 'test run complete')
+        return response

@@ -28,8 +28,6 @@ def operate_testcase():
     testcase_name = data.get('name')
     operate_type = data.get('operate_type')
 
-    print(data)
-
     if not operate_type:
         return bad_request('must include operate_type')
 
@@ -276,6 +274,7 @@ def tests_batch_run():
 
         test = RunJob(payload, config)
         result = test.job()
+        # 这里summary格式为dict，理论应该为string，需要明天试一下，testcase那里也有同样问题
 
         data = {
             'summary': result,

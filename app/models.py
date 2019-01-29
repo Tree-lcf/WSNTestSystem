@@ -123,6 +123,7 @@ class Project(db.Model):
     envs = db.relationship('Env', backref='project', lazy='dynamic')
     apis = db.relationship('Api', backref='project', lazy='dynamic')
     testcases = db.relationship('TestCase', backref='project', lazy='dynamic')
+    teststeps = db.relationship('TestStep', backref='project', lazy='dynamic')
     suites = db.relationship('Suite', backref='project', lazy='dynamic')
     users = db.relationship(
         'User', secondary=project_user,
@@ -274,16 +275,23 @@ class Project(db.Model):
                     api_obj = Api.query.get_or_404(step.api_id)
                     env_obj = Env.query.get_or_404(step.env_id)
                     user_obj = User.query.get_or_404(step.user_id)
+                    report_obj = step.reports.order_by(Report.timestamp.desc()).first()
                     api_data = {'api_id': api_obj.id, 'api_name': api_obj.name, 'api_url': api_obj.req_relate_url}
                     env_data = {'env_id': env_obj.id, 'env_name': env_obj.env_name}
                     user_data = {'user_id': user_obj.id, 'user_name': user_obj.username}
+                    report_data = {
+                        'report_id': report_obj.id if report_obj else '',
+                        'report_result': str(report_obj.test_result) if report_obj else '',
+                        'report_time': report_obj.timestamp.strftime('%Y/%m/%d %H:%M:%S') if report_obj else ''
+                    }
 
                     step_data = {
                         'step_id': step.id,
                         'step_name': step.name,
                         'api': api_data,
                         'env': env_data,
-                        'user': user_data
+                        'user': user_data,
+                        'report': report_data
                     }
                     teststeps_data.append(step_data)
 
@@ -331,18 +339,25 @@ class Module(db.Model):
 
         teststeps_data = []
         for api in self.apis.order_by(Api.timestamp.desc()).all():
-            for step in api.teststeps(TestStep.timestamp.desc()).all():
+            for step in api.teststeps.order_by(TestStep.timestamp.desc()).all():
 
                 api = Api.query.get_or_404(step.api_id)
                 env = Env.query.get_or_404(step.env_id)
                 user = User.query.get_or_404(step.user_id)
+                report_obj = step.reports.order_by(Report.timestamp.desc()).first()
+                report_data = {
+                    'report_id': report_obj.id if report_obj else '',
+                    'report_result': str(report_obj.test_result) if report_obj else '',
+                    'report_time': report_obj.timestamp.strftime('%Y/%m/%d %H:%M:%S') if report_obj else ''
+                }
 
                 step_data = {
                     'step_id': step.id,
                     'step_name': step.name,
                     'api': {'api_id': api.id, 'api_name': api.name, 'api_url': api.req_relate_url},
                     'env': {'env_id': env.id, 'env_name': env.env_name},
-                    'user': {'user_id': user.id, 'user_name': user.username}
+                    'user': {'user_id': user.id, 'user_name': user.username},
+                    'report': report_data
                 }
                 teststeps_data.append(step_data)
 
@@ -568,18 +583,25 @@ class Api(db.Model):
         project = Project.query.get_or_404(self.project_id)
 
         teststeps_data = []
-        for step in self.teststeps(TestStep.timestamp.desc()).all():
+        for step in self.teststeps.order_by(TestStep.timestamp.desc()).all():
 
             api = Api.query.get_or_404(step.api_id)
             env = Env.query.get_or_404(step.env_id)
             user = User.query.get_or_404(step.user_id)
+            report_obj = step.reports.order_by(Report.timestamp.desc()).first()
+            report_data = {
+                'report_id': report_obj.id if report_obj else '',
+                'report_result': str(report_obj.test_result) if report_obj else '',
+                'report_time': report_obj.timestamp.strftime('%Y/%m/%d %H:%M:%S') if report_obj else ''
+            }
 
             step_data = {
                 'step_id': step.id,
                 'step_name': step.name,
                 'api': {'api_id': api.id, 'api_name': api.name, 'api_url': api.req_relate_url},
                 'env': {'env_id': env.id, 'env_name': env.env_name},
-                'user': {'user_id': user.id, 'user_name': user.username}
+                'user': {'user_id': user.id, 'user_name': user.username},
+                'report': report_data
             }
             teststeps_data.append(step_data)
 
@@ -820,12 +842,14 @@ class TestStep(db.Model):
     api_id = db.Column(db.Integer, db.ForeignKey('api.id'))
     env_id = db.Column(db.Integer, db.ForeignKey('env.id'))
     user_id = db.Column(db.Integer, db.ForeignKey('user.id'))
+    project_id = db.Column(db.Integer, db.ForeignKey('project.id'))
     # suite_id = db.Column(db.Integer, db.ForeignKey('suite.id'))
     # testcase_id = db.Column(db.Integer, db.ForeignKey('testcase.id'))
     req_params = db.Column(db.Text())
     req_headers = db.Column(db.Text())
     req_cookies = db.Column(db.Text())
     req_body = db.Column(db.Text())
+    reports = db.relationship('Report', backref='teststep', lazy='dynamic')
 
     def __repr__(self):
         return '<TestStep {}>'.format(self.name)
@@ -834,7 +858,7 @@ class TestStep(db.Model):
         user = g.current_user
         self.user_id = user.id
 
-        for field in ['name', 'api_id', 'env_id', 'test_desc']:
+        for field in ['name', 'project_id', 'api_id', 'env_id', 'test_desc']:
             if field in data:
                 if not data[field]:
                     print('null, bad request')
@@ -861,12 +885,14 @@ class TestStep(db.Model):
         project = Project.query.get_or_404(api.project_id)
         module = Module.query.get_or_404(api.module_id)
         user = User.query.get_or_404(self.user_id)
+        report = self.reports.order_by(Report.timestamp.desc()).first()
 
         data = {
             'project': {'project_id': project.id, 'project_name': project.project_name},
             'module': {'module_id': module.id, 'module_name': module.module_name},
             'teststep_id': self.id,
             'teststep_name': self.name,
+            'test_desc': self.test_desc,
             'user': {'user_id': self.user_id, 'user_name': user.username},
             'api': {'api_id': self.api_id, 'api_name': api.name, 'api_url': api.req_relate_url},
             'env': {'env_id': self.env_id,
@@ -879,9 +905,31 @@ class TestStep(db.Model):
             'req_params': req_params,
             'req_headers': req_headers,
             'req_cookies': req_cookies,
-            'req_body': req_body
+            'req_body': req_body,
+            'report_id': report.id if report else '',
+            'report_result': str(report.test_result) if report else '',
+            'report_time': report.timestamp.strftime('%Y/%m/%d %H:%M:%S') if report else ''
         }
         return data
+
+    def to_reports_dict(self, page_num, per_page):
+        reports = self.reports.paginate(page_num, per_page, False)
+        reports_items = reports.items
+        report_dicts = []
+        for report in reports_items:
+            report_dicts.append(report.to_dict())
+
+        payload = {
+            'teststep_id': self.id,
+            'report_dicts': report_dicts,
+            'meta': {
+                'has_next': reports.has_next,
+                'next_num': reports.next_num,
+                'has_prev': reports.has_prev,
+                'prev_num': reports.prev_num
+            }
+        }
+        return payload
 
 
 class Report(db.Model):
@@ -891,16 +939,17 @@ class Report(db.Model):
     test_result = db.Column(db.Boolean)
     timestamp = db.Column(db.DateTime, index=True, default=datetime.utcnow)
     testcase_id = db.Column(db.Integer, db.ForeignKey('testcase.id'))
+    teststep_id = db.Column(db.Integer, db.ForeignKey('teststep.id'))
 
     def __repr__(self):
-        return '<Report {}>'.format(self.report_name)
+        return '<Report {}>'.format(self.id)
 
     def from_dict(self, data):
-        for field in ['summary', 'test_result']:
+        for field in ['summary', 'test_result', 'testcase_id', 'teststep_id']:
             if field in data:
                 setattr(self, field, data[field])
 
-        self.testcase_id = data['testcase_id']
+        # self.testcase_id = data['testcase_id']
 
         if 'name' in data:
             self.name = data['name'] + '--%s' % datetime.utcnow().strftime('%Y/%m/%d %H:%M:%S')
@@ -912,9 +961,10 @@ class Report(db.Model):
             'report_id': self.id,
             'report_name': self.name,
             'summary': summary,
-            'test_result': self.test_result,
+            'test_result': str(self.test_result),
             'timestamp': self.timestamp.strftime('%Y/%m/%d %H:%M:%S'),
-            'testcase_id': self.testcase_id
+            'testcase_id': self.testcase_id,
+            'teststep_id': self.teststep_id
         }
         return data
 
