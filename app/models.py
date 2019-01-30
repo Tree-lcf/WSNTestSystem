@@ -808,13 +808,17 @@ class TestCase(db.Model):
     def to_dict(self):
         env = Env.query.get(self.env_id)
         teststeps = json.loads(self.teststeps)
+        project = Project.query.get(self.project_id)
+        suite = Suite.query.get(self.suite_id)
 
         data = {
             'testcase_id': self.id,
             'name': self.name,
             'test_desc': self.test_desc,
-            'project_name': Project.query.get(self.project_id).project_name,
-            'suite_name': Suite.query.get(self.suite_id).suite_name,
+            'project_name': project.project_name,
+            'project_id': project.id,
+            'suite_name': suite.suite_name,
+            'suite_id': suite.id,
             'env_id': env.id if env else '',
             'env_name': env.env_name if env else '',
             'env_host': env.env_host if env else '',
@@ -825,46 +829,46 @@ class TestCase(db.Model):
         }
         return data
 
-    @staticmethod
-    def to_collection_dict(page_num, per_page):
-        projects = g.current_user.followed_projects().paginate(page_num, per_page, False)
-        project_items = projects.items
-        payload = []
-        for project in project_items:
-            module_items = []
-            for module in project.modules.all():
-                api_items = []
-                for api in module.apis.all():
-                    testcases = []
-                    for testcase in api.testcases.all():
-                        testcase_data = testcase.to_dict()
-                        testcases.append(testcase_data)
-                    api_data = {
-                        'api_id': api.id,
-                        'testcases': testcases
-                    }
-                    api_items.append(api_data)
-                module_data = {
-                    'module_id': module.id,
-                    'api_items': api_items
-                }
-                module_items.append(module_data)
-            project_data = {
-                'project_id': project.id,
-                'module_items': module_items
-            }
-            payload.append(project_data)
-
-        data = {
-            'project_items': payload,
-            'meta': {
-                'has_next': projects.has_next,
-                'next_num': projects.next_num,
-                'has_prev': projects.has_prev,
-                'prev_num': projects.prev_num
-            }
-        }
-        return data
+    # @staticmethod
+    # def to_collection_dict(page_num, per_page):
+    #     projects = g.current_user.followed_projects().paginate(page_num, per_page, False)
+    #     project_items = projects.items
+    #     payload = []
+    #     for project in project_items:
+    #         module_items = []
+    #         for module in project.modules.all():
+    #             api_items = []
+    #             for api in module.apis.all():
+    #                 testcases = []
+    #                 for testcase in api.testcases.all():
+    #                     testcase_data = testcase.to_dict()
+    #                     testcases.append(testcase_data)
+    #                 api_data = {
+    #                     'api_id': api.id,
+    #                     'testcases': testcases
+    #                 }
+    #                 api_items.append(api_data)
+    #             module_data = {
+    #                 'module_id': module.id,
+    #                 'api_items': api_items
+    #             }
+    #             module_items.append(module_data)
+    #         project_data = {
+    #             'project_id': project.id,
+    #             'module_items': module_items
+    #         }
+    #         payload.append(project_data)
+    #
+    #     data = {
+    #         'project_items': payload,
+    #         'meta': {
+    #             'has_next': projects.has_next,
+    #             'next_num': projects.next_num,
+    #             'has_prev': projects.has_prev,
+    #             'prev_num': projects.prev_num
+    #         }
+    #     }
+    #     return data
 
     def to_reports_dict(self, page_num, per_page):
         reports = self.reports.paginate(page_num, per_page, False)

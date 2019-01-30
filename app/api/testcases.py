@@ -130,8 +130,8 @@ def operate_testcase():
     if operate_type == '3':
         if not testcase_id:
             return bad_request('please input testcase_id')
-        # for id in testcase_id:
-        testcase = TestCase.query.get_or_404(id)
+        # for id in testcase_id: 这是为批量删做准备的
+        testcase = TestCase.query.get_or_404(testcase_id)
         if Project.query.get(testcase.project_id) not in g.current_user.followed_projects().all():
             return bad_request('cannot delete it as you are not the member of project')
         db.session.delete(testcase)
@@ -152,19 +152,19 @@ def operate_testcase():
         env = Env.query.get_or_404(env_id)
 
         config = {
-            'name': name,
+            'name': name if name else '',
             'request': {
                 'base_url': env.env_host,
             },
             'variables': json.loads(env.env_var)  # [{"user_agent": "iOS/10.3"}, {"user_agent": "iOS/10.3"}]
         }
-        teststeps = json.loads(data.get('teststeps'))
+        teststeps = data.get('teststeps')
 
         payload = []
 
         for teststep in teststeps:
-            if teststep['step_id']:
-                step_id = int(teststep['step_id'])
+            if teststep['id']:
+                step_id = int(teststep['id'])
                 teststep = TestStep.query.get_or_404(step_id)
             else:
                 return bad_request('please add test steps')
@@ -237,8 +237,8 @@ def tests_batch_run():
         payload = []
 
         for teststep in teststeps:
-            if teststep['step_id']:
-                step_id = int(teststep['step_id'])
+            if teststep['id']:
+                step_id = int(teststep['id'])
                 teststep = TestStep.query.get_or_404(step_id)
             else:
                 return bad_request('please add test steps')
@@ -271,9 +271,14 @@ def tests_batch_run():
         # 这里summary格式为dict，理论应该为string，需要明天试一下，testcase那里也有同样问题
         # 试过了，这里还需为dict类型，sting的话，后面都 的时候会出问题
 
+        try:
+            test_result = result['details'][0]['records'][0]['meta_data']['response']['ok']
+        except KeyError:
+            test_result = False
+
         data = {
             'summary': result,
-            'test_result': result['success'],
+            'test_result': test_result,
             'testcase_id': test_id,
             'name': name
         }

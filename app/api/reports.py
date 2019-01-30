@@ -21,25 +21,37 @@ def operate_report():
     data = request.get_json() or {}
     report_id = data.get('report_id')
     operate_type = data.get('operate_type')
-    # testcase_id = data.get('testcase_id')
     teststep_id = data.get('teststep_id')
 
     if not operate_type:
         return bad_request('must include operate_type')
 
-    if not teststep_id:
-        return bad_request('must include teststep_id')
-    teststep = TestStep.query.get_or_404(int(teststep_id))
-    project = Project.query.get_or_404(teststep.project_id)
-
-    if project not in g.current_user.followed_projects().all():
-        return bad_request('you are not the member of project')
-
     # '1' = 查
     if operate_type == '1':
-        report = teststep.reports.order_by(Report.timestamp.desc()).first()
-        data = report.to_dict()
-        return trueReturn(data, 'found it')
+        if not teststep_id or not testcase_id:
+            return bad_request('must include teststep_id or testcase_id')
+
+        if teststep_id:
+            teststep = TestStep.query.get_or_404(int(teststep_id))
+            project = Project.query.get_or_404(teststep.project_id)
+
+            if project not in g.current_user.followed_projects().all():
+                return bad_request('you are not the member of project')
+            report = teststep.reports.order_by(Report.timestamp.desc()).first()
+            data = report.to_dict()
+            return trueReturn(data, 'found it')
+
+        if report_id:
+            report = Report.query.get_or_404(int(report_id))
+            testcase_id = report.testcase_id.first()
+            testcase = TestCase.query.get_or_404(testcase_id)
+            project = Project.query.get_or_404(testcase.project_id)
+
+            if project not in g.current_user.followed_projects().all():
+                return bad_request('you are not the member of project')
+
+            data = report.to_dict()
+            return trueReturn(data, 'found it')
 
     # 查
     # if operate_type == '2':
