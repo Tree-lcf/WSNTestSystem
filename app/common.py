@@ -50,6 +50,7 @@ class Runner:
 
 
 def session_commit():
+    # db.session.commit()
     try:
         db.session.commit()
     except Exception as e:

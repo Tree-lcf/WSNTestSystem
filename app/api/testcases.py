@@ -3,7 +3,7 @@ from flask import request
 from app.models import *
 from app.auth.auth import verify_token, token_auth_error
 from app.errors import trueReturn, bad_request
-from app.common import session_commit, RunJob, Runner
+from app.common import session_commit, RunJob, Runner, MyEncoder
 
 
 @bp.before_request
@@ -20,10 +20,8 @@ def operate_testcase():
     '''
     data = request.get_json() or {}
     project_id = data.get('project_id')
-    api_id = data.get('api_id')
     env_id = data.get('env_id')
     suite_id = data.get('suite_id')
-    module_id = data.get('module_id')
     testcase_id = data.get('testcase_id')
     testcase_name = data.get('name')
     operate_type = data.get('operate_type')
@@ -35,14 +33,10 @@ def operate_testcase():
     if operate_type == '1':
 
         project = Project.query.get_or_404(project_id)
-        api = Api.query.get_or_404(api_id)
         suite = Suite.query.get_or_404(suite_id)
 
         if project not in g.current_user.followed_projects().all():
             return bad_request('you are not the member of project %s' % project.project_name)
-
-        if api not in project.apis.all():
-            return bad_request('no api %s in project %s' % (api.name, project.project_name))
 
         if suite not in project.suites.all():
             return bad_request('no suite %s in project %s' % (suite.suite_name, project.project_name))
@@ -136,11 +130,11 @@ def operate_testcase():
     if operate_type == '3':
         if not testcase_id:
             return bad_request('please input testcase_id')
-        for id in testcase_id:
-            testcase = TestCase.query.get_or_404(id)
-            if Project.query.get(testcase.project_id) not in g.current_user.followed_projects().all():
-                return bad_request('cannot delete it as you are not the member of project')
-            db.session.delete(testcase)
+        # for id in testcase_id:
+        testcase = TestCase.query.get_or_404(id)
+        if Project.query.get(testcase.project_id) not in g.current_user.followed_projects().all():
+            return bad_request('cannot delete it as you are not the member of project')
+        db.session.delete(testcase)
 
         session_commit()
         data = {
@@ -275,6 +269,7 @@ def tests_batch_run():
         test = RunJob(payload, config)
         result = test.job()
         # 这里summary格式为dict，理论应该为string，需要明天试一下，testcase那里也有同样问题
+        # 试过了，这里还需为dict类型，sting的话，后面都 的时候会出问题
 
         data = {
             'summary': result,

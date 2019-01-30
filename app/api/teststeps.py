@@ -3,7 +3,7 @@ from flask import request
 from app.models import *
 from app.auth.auth import verify_token, token_auth_error
 from app.errors import trueReturn, bad_request
-from app.common import session_commit, Runner
+from app.common import session_commit, Runner, RunJob
 
 
 @bp.before_request
@@ -156,17 +156,22 @@ def operate_teststep():
         summary = json.loads(summary)
         # return trueReturn(report, 'run success')
 
-        print(summary)
         # 这里summary格式为dict，理论应该为string，需要明天试一下，testcase那里也有同样问题
+
+        try:
+            test_result = summary['details'][0]['records'][0]['meta_data']['response']['ok']
+        except KeyError:
+            test_result = False
 
         data = {
             'summary': summary,
-            'test_result': summary['details'][0]['records'][0]['meta_data']['response']['ok'],
+            'test_result': test_result,
             'teststep_id': teststep.id,
             'name': teststep.name
         }
 
         # 这段代码是为了之后，若只保留一个测试报告，对原有报告进行更新的时候使用
+        # 试过了，这里还需为dict类型，sting的话，后面都 的时候会出问题
         report_o = teststep.reports.order_by(Report.timestamp.desc()).first()
         if not report_o:
             report = Report()
@@ -180,3 +185,85 @@ def operate_teststep():
 
         response = trueReturn({'report_id': report.id}, 'test run complete')
         return response
+
+
+@bp.route('/testStepBatchRun', methods=['POST'])
+def teststep_batch_run():
+    data = request.get_json() or {}
+    project_id = data.get('project_id')
+    teststep_id_items = data.get('teststep_id_items')
+
+    if not len(teststep_id_items):
+        return bad_request('no teststeps selected')
+
+    project = Project.query.get_or_404(project_id)
+    if project not in g.current_user.followed_projects().all():
+        return bad_request('you are not the member of project %s' % project.project_name)
+
+    report_id_items = []
+    for teststep_id in teststep_id_items:
+        teststep_id = int(teststep_id)
+        teststep = TestStep.query.get_or_404(teststep_id)
+        if teststep not in project.teststeps.all():
+            return bad_request('no teststeps id %d in project %s' % (teststep_id, project.project_name))
+
+        name = teststep.name
+
+        env = None
+        if teststep.env_id:
+            env = Env.query.get_or_404(teststep.env_id)
+
+        config = {
+            'name': name,
+            'request': {
+                'base_url': env.env_host if env else '',
+            },
+            'variables': json.loads(env.env_var) if env else []  # [{"user_agent": "iOS/10.3"}, {"user_agent": "iOS/10.3"}]
+        }
+
+        api = Api.query.get_or_404(teststep.api_id)
+
+        data = {
+            'name': teststep.name,
+            'req_method': api.req_method,
+            'req_temp_host': env.env_host if env.env_host else '',
+            'req_relate_url': api.req_relate_url,
+            'req_data_type': api.req_data_type,
+            'req_headers': teststep.req_headers if teststep.req_headers else api.req_headers,
+            'req_cookies': teststep.req_cookies if teststep.req_cookies else api.req_cookies,
+            'req_params': teststep.req_params if teststep.req_params else api.req_params,
+            'req_body': teststep.req_body if teststep.req_body else api.req_body,  # '{"type": "ios"}'
+            'variables': env.env_var if env.env_var else '',  # [{"user_agent": "iOS/10.3"}, ]
+            'extracts': env.extracts if env.extracts else '',
+            'asserts': env.asserts if env.asserts else ''  # [{'eq': ['status_code', 200]}]
+        }
+
+        test = RunJob([data], config)
+        summary = test.job()
+
+        try:
+            test_result = summary['details'][0]['records'][0]['meta_data']['response']['ok']
+        except KeyError:
+            test_result = False
+
+        data = {
+            'summary': summary,
+            'test_result': test_result,
+            'teststep_id': teststep.id,
+            'name': teststep.name
+        }
+
+        report_o = teststep.reports.order_by(Report.timestamp.desc()).first()
+        if not report_o:
+            report = Report()
+        else:
+            report = report_o
+
+        report.from_dict(data)
+        db.session.add(report)
+        session_commit()
+
+        report_id_items.append(report.id)
+
+    response = trueReturn({'report_id_items': report_id_items}, 'tests run complete all, please check reports')
+    return response
