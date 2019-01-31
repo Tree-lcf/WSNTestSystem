@@ -26,10 +26,8 @@ def operate_report():
     if not operate_type:
         return bad_request('must include operate_type')
 
-    # '1' = 查
+    # '1' = 查报告详情
     if operate_type == '1':
-        if not teststep_id or not testcase_id:
-            return bad_request('must include teststep_id or testcase_id')
 
         if teststep_id:
             teststep = TestStep.query.get_or_404(int(teststep_id))
@@ -43,7 +41,7 @@ def operate_report():
 
         if report_id:
             report = Report.query.get_or_404(int(report_id))
-            testcase_id = report.testcase_id.first()
+            testcase_id = report.testcase_id
             testcase = TestCase.query.get_or_404(testcase_id)
             project = Project.query.get_or_404(testcase.project_id)
 
@@ -52,6 +50,8 @@ def operate_report():
 
             data = report.to_dict()
             return trueReturn(data, 'found it')
+
+        return bad_request('must include teststep_id or report_id')
 
     # 查
     # if operate_type == '2':

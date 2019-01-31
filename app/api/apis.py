@@ -187,11 +187,12 @@ def operate_api():
 
         # print(data)
         tester = Runner([data])
-        # try:
-        report = tester.run()
-        # except Exception as e:
-        #     print(e)
-        #     return bad_request('wrong request')
+        try:
+            # 注意这里没有进行超时返回的处理，后面需要加代码进行处理
+            report = tester.run()
+        except Exception as e:
+            print(e)
+            return bad_request('wrong request')
 
         report = json.loads(report)
         return trueReturn(report, 'run success')
